@@ -1,37 +1,13 @@
+import argparse
 from pathlib import Path
 import numpy as np
-import cv2
-from utils.geofiles import *
-from tqdm import tqdm
+from utils import geofiles, spacenet7_helpers
 import matplotlib.pyplot as plt
-
-DATASET_FOLDER = Path('/storage/shafner/spacenet7')
-SEED = 42
-UPSAMPLE = 2
-
-
-def file2date(file: Path) -> tuple:
-    name_parts = file.stem.split('_')
-    year, month = int(name_parts[2]), int(name_parts[3])
-    return year, month
-
-
-def get_all_aoi_ids(dataset: str = 'train') -> list:
-    parent = DATASET_FOLDER / dataset
-    return [f.name for f in parent.iterdir() if f.is_dir()]
-
-
-def get_all_dates(dataset: str, aoi_id: str, sort_by_date: bool) -> list:
-    folder = DATASET_FOLDER / dataset / aoi_id / 'images_masked'
-    dates = [file2date(f) for f in folder.glob('**/*')]
-    if sort_by_date:
-        dates.sort(key= lambda d: d[0] * 12 + d[1])
-    return dates
 
 
 def round_to_255(img):
-    img[img>127] = 255
-    img[img<=127] = 0
+    img[img > 127] = 255
+    img[img <= 127] = 0
     return img
 
 
@@ -45,7 +21,7 @@ def create_building_masks(aoi_id: str, save: bool = False):
         # prepare empty mask
         img, transform, crs = read_tif(image_file)
         mask = np.zeros((img.shape[0], img.shape[1], 1), dtype=np.uint8)
-        mask_upsample = np.zeros((img.shape[0]*UPSAMPLE, img.shape[1]*UPSAMPLE, 1), dtype=np.uint8)
+        mask_upsample = np.zeros((img.shape[0] * UPSAMPLE, img.shape[1] * UPSAMPLE, 1), dtype=np.uint8)
 
         # load buildings polygons and fill mask
         buildings_file = aoi_folder / 'labels_match_pix' / f'{image_file.stem}_Buildings.geojson'
@@ -64,7 +40,7 @@ def create_building_masks(aoi_id: str, save: bool = False):
                 building_outline = [coord[:2] for coord in building_outline]
             cv2.fillPoly(mask, [np.rint(np.array(building_outline)).astype(int)], 255, cv2.LINE_AA)
             # Repeat on the upsampled mask
-            cv2.fillPoly(mask_upsample, [np.rint(np.array(building_outline)*UPSAMPLE).astype(int)], 255, cv2.LINE_AA)
+            cv2.fillPoly(mask_upsample, [np.rint(np.array(building_outline) * UPSAMPLE).astype(int)], 255, cv2.LINE_AA)
 
             # setting holes in building back to 0
             # all building elements but the first one are considered holes
@@ -75,11 +51,12 @@ def create_building_masks(aoi_id: str, save: bool = False):
                     if len(first_coord) == 3:
                         building_hole = [coord[:2] for coord in building_hole]
                     cv2.fillPoly(mask, [np.rint(np.array(building_hole)).astype(int)], 0, cv2.LINE_AA)
-                    cv2.fillPoly(mask_upsample, [np.rint(np.array(building_hole)*UPSAMPLE).astype(int)], 0, cv2.LINE_AA)
+                    cv2.fillPoly(mask_upsample, [np.rint(np.array(building_hole) * UPSAMPLE).astype(int)], 0,
+                                 cv2.LINE_AA)
 
         # TODO: Maybe have a different threshold here for better building separation
-        mask[mask<255] = 0
-        mask_upsample[mask_upsample<255] = 0
+        mask[mask < 255] = 0
+        mask_upsample[mask_upsample < 255] = 0
 
         # saving created mask or show it
         if save:
@@ -102,37 +79,49 @@ def create_building_masks(aoi_id: str, save: bool = False):
             plt.show()
 
 
-# for normal split use pass ('train', 'validation') as split
-def create_samples_file(dataset: str, split: tuple = None, split_ratio: float = 0.1):
-    np.random.seed(SEED)
-    # container for all the samples (each image results in a sample)
-    samples = []
+def create_metadata_file(spacenet7_path: str, dataset: str):
+
     # container to store all dates of a time series (aoi_id = dates)
-    aoi_dates = {}
+    metadata = {}
 
-    aoi_ids = get_all_aoi_ids(dataset)
-    random_numbers = list(np.random.rand(len(aoi_ids)))
+    for aoi_id in spacenet7_helpers.get_all_aoi_ids(spacenet7_path, dataset):
+        # container for all the timestamps (each image results in a timestamp)
+        timestamps = []
+        all_dates_sorted = spacenet7_helpers.get_all_dates(spacenet7_path, dataset, aoi_id, sort_by_date=True)
+        for i, date in enumerate(all_dates_sorted):
+            year, month = date
+            timestamp = {
+                'aoi_id': aoi_id,
+                'index': i,
+                'year': year,
+                'month': month,
+                'mask': spacenet7_helpers.is_masked(spacenet7_path, dataset, aoi_id, year, month),
+                'label': True if dataset == 'train' else False,
+            }
+            timestamps.append(timestamp)
 
-    for aoi_id, random_number in zip(aoi_ids, random_numbers):
-        all_dates_sorted = get_all_dates(dataset, aoi_id, sort_by_date=True)
-        aoi_dates[aoi_id] = all_dates_sorted
-        for i, (year, month) in enumerate(all_dates_sorted):
-            sample = {'aoi_id': aoi_id, 'year': year, 'month': month, 'ts_index': i}
-            if split is not None:
-                sample['split'] = split[0] if random_number > split_ratio else split[1]
-            samples.append(sample)
+        metadata[aoi_id] = timestamps
 
-    file = DATASET_FOLDER / f'{dataset}_samples.json'
-    save_json(file, {'samples': samples, 'aoi_dates': aoi_dates})
+    file = Path(spacenet7_path) / f'metadata_{dataset}.json'
+    geofiles.write_json(file, metadata)
+
+
+def metadata_argument_parser():
+    # https://docs.python.org/3/library/argparse.html#the-add-argument-method
+    parser = argparse.ArgumentParser(description="Experiment Args")
+
+    parser.add_argument('-s', "--spacenet7-dir", dest='spacenet7_dir', required=True, help="path to SpaceNet7 dataset")
+    parser.add_argument('-d', "--dataset", dest='dataset', required=True, help="dataset (train/test)")
+
+    parser.add_argument(
+        "opts",
+        help="Modify config options using the command-line",
+        default=None,
+        nargs=argparse.REMAINDER,
+    )
+    return parser
 
 
 if __name__ == '__main__':
-
-    # test_aoi = 'L15-1438E-1134N_5753_3655_13'
-    # create_building_masks(test_aoi, save=False)
-
-    # for aoi_id in sorted(get_all_aoi_ids()):
-    #     create_building_masks(aoi_id, save=True)
-
-    create_samples_file('train', split=('train', 'validation'), split_ratio=0.1)
-    create_samples_file('test')
+    args = metadata_argument_parser().parse_known_args()[0]
+    create_metadata_file(args.spacenet7_dir, args.dataset)

@@ -1,5 +1,0 @@
-_BASE_: "base.yaml"
-THRESH: 0.0
-
-TRAINER:
-  LR: 1e-4

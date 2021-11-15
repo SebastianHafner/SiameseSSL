@@ -1,8 +1,0 @@
-_BASE_: "base.yaml"
-THRESH: 0.0
-
-AUGMENTATION:
-  CROP_SIZE: 1024
-
-TRAINER:
-  BATCH_SIZE: 1

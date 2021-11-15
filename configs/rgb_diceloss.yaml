@@ -1,9 +1,0 @@
-_BASE_: "base.yaml"
-THRESH: 0.0
-
-MODEL:
-  IN_CHANNELS: 3
-  LOSS_TYPE: 'SoftDiceLoss'
-
-DATALOADER:
-  INCLUDE_ALPHA: False

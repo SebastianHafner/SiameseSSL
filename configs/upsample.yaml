@@ -1,7 +1,0 @@
-_BASE_: "base2.yaml"
-
-MODEL:
-    TOPOLOGY: [64, 128, 256, 512,]
-
-DATALOADER:
-    UPSAMPLE: 2

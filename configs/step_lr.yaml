@@ -1,8 +1,0 @@
-_BASE_: "base2.yaml"
-
-TRAINER:
-  ALGORITHM: 'adamw'
-  LR_SCHEDULE: 'step'
-  STEP_SIZE: 7000
-  GAMMA: 0.5
-  LR: 1e-3

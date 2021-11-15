@@ -1,0 +1,6 @@
+_BASE_: "base.yaml"
+DEBUG: True
+INFERENCE_CHECKPOINT: 20
+
+MODEL:
+  TYPE: 'siameseunet'

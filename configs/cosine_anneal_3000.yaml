@@ -1,8 +1,0 @@
-_BASE_: "base2.yaml"
-
-TRAINER:
-  ALGORITHM: 'adamw'
-  LR_SCHEDULE: 'cosine_anneal'
-  LR: 1e-3
-  T_0: 3000
-  T_MULT: 1
