@@ -1,0 +1,4 @@
+_BASE_: "base2.yaml"
+
+AUGMENTATION:
+  HISTOGRAM_EQUALIZATION: True

@@ -1,0 +1,13 @@
+_BASE_: "base2.yaml"
+
+MODEL:
+    TOPOLOGY: [64, 128, 256, 512, ]
+
+DATALOADER:
+    UPSAMPLE: 2
+
+TRAINER:
+  LR_SCHEDULE: 'cosine_anneal'
+  LR: 4e-4
+  T_0: 2100
+  T_MULT: 2

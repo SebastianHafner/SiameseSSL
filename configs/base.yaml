@@ -1,0 +1,41 @@
+SEED: 7
+DEBUG: False
+OUTPUT_BASE_DIR: '/storage/shafner/spacenet7/networks'
+SAVE_CHECKPOINTS: [50, 100]
+THRESH: 0.0
+
+MODEL:
+  TYPE: 'unet'
+  OUT_CHANNELS: 1
+  IN_CHANNELS: 3
+  LOSS_TYPE: 'FrankensteinLoss'
+  POSITIVE_WEIGHT: 250
+  NEGATIVE_WEIGHT: 1
+  TOPOLOGY: [64, 128, 256, 512,]
+  BACKBONE:
+    ENABLED: False
+    TYPE: 'resnet34'
+    PRETRAINED_WEIGHTS: None
+
+DATALOADER:
+  NUM_WORKER: 16
+  SHUFFLE: True
+  LABEL: 'buildings'
+  INCLUDE_ALPHA: False
+  UPSAMPLE: False
+
+DATASETS:
+  PATH: '/storage/shafner/spacenet7/'
+
+TRAINER:
+  LR: 1e-4
+  BATCH_SIZE: 4
+  EPOCHS: 101
+
+AUGMENTATION:
+  CROP_SIZE: 512
+  IMPORTANCE_CROPPING: False
+  RANDOM_FLIP: True
+  RANDOM_ROTATE: True
+  PAD_TO_EVEN: True
+  NORMALIZE_IMAGENET: False

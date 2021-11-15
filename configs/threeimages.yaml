@@ -1,0 +1,10 @@
+_BASE_: "base2.yaml"
+
+DATALOADER:
+  IMAGE_STACK_OFFSETS: [-1, 0, 1]
+
+MODEL:
+  IN_CHANNELS: 9
+
+AUGMENTATION:
+  COLORS: True

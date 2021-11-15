@@ -1,0 +1,8 @@
+_BASE_: "base2.yaml"
+THRESH: 0.0
+
+MODEL:
+  LOSS_TYPE: 'LovaszLoss'
+
+TRAINER:
+    LR: 1e-5

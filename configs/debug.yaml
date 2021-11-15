@@ -1,0 +1,8 @@
+_BASE_: "base2.yaml"
+DEBUG: True
+
+DATALOADER:
+  IMAGE_STACK_OFFSETS: [-1, 0]
+
+MODEL:
+  IN_CHANNELS: 6
