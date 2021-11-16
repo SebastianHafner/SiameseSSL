@@ -135,6 +135,8 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
         super().__init__(cfg, run_type)
 
         self.dataset_mode = cfg.DATALOADER.MODE if dataset_mode is None else dataset_mode
+        self.include_building_labels = cfg.DATALOADER.INCLUDE_BUILDING_LABELS
+        self.include_unlabeled = cfg.DATALOADER.INCLUDE_UNLABELED
 
         # handling transformations of data
         self.no_augmentations = no_augmentations
@@ -142,10 +144,18 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
         # loading labeled samples (sn7 train set) and subset to run type aoi ids
         self.aoi_ids = cfg.DATASET.TRAINING_IDS if run_type == 'training' else cfg.DATASET.VALIDATION_IDS
+        self.metadata = geofiles.load_json(self.root_path / f'metadata_train.json')
+        if self.include_unlabeled:
+            # self.aoi_ids.extend(cfg.DATASET.VALIDATIOn_IDS)
+            self.aoi_ids.extend(cfg.DATASET.TEST_IDS)
+            metadata_test = geofiles.load_json(self.root_path / f'metadata_test.json')
+            for aoi_id, timestamps in metadata_test.items():
+                self.metadata[aoi_id] = timestamps
         if not disable_multiplier:
             self.aoi_ids = self.aoi_ids * cfg.DATALOADER.TRAINING_SITES_MULTIPLIER
 
-        self.metadata = geofiles.load_json(self.root_path / f'metadata_train.json')
+
+
 
         self.length = len(self.aoi_ids)
 
@@ -167,21 +177,35 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
         img_t1 = self._load_mosaic(aoi_id, 'train', year_t1, month_t1)
         img_t2 = self._load_mosaic(aoi_id, 'train', year_t2, month_t2)
+        imgs = np.concatenate((img_t1, img_t2), axis=-1)
 
         change = self._load_change_label(aoi_id, year_t1, month_t1, year_t2, month_t2)
 
-        img_t1, img_t2, change = self.transform((img_t1, img_t2, change))
+        if self.include_building_labels:
+            buildings_t1 = self._load_building_label(aoi_id, year_t1, month_t1)
+            buildings_t2 = self._load_building_label(aoi_id, year_t2, month_t2)
+            buildings = np.concatenate((buildings_t1, buildings_t2), axis=-1).astype(np.float32)
+        else:
+            buildings = np.zeros((change.shape[0], change.shape[1], 2), dtype=np.float32)
+
+        imgs, buildings, change = self.transform((imgs, buildings, change))
+        img_t1, img_t2 = imgs[:self.img_bands, ], imgs[self.img_bands:, ]
 
         item = {
             'x_t1': img_t1,
             'x_t2': img_t2,
-            'y': change,
+            'y_change': change,
             'aoi_id': aoi_id,
             'year_t1': year_t1,
             'month_t1': month_t1,
             'year_t2': year_t2,
             'month_t2': month_t2,
         }
+
+        if self.include_building_labels:
+            buildings_t1, buildings_t2 = buildings[0, ], buildings[1, ]
+            item['y_sem_t1'] = buildings_t1.unsqueeze(0)
+            item['y_sem_t2'] = buildings_t2.unsqueeze(0)
 
         return item
 

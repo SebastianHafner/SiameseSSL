@@ -30,7 +30,9 @@ def run_training(cfg):
     net.to(device)
     optimizer = optim.AdamW(net.parameters(), lr=cfg.TRAINER.LR, weight_decay=0.01)
 
-    criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
+    change_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
+    sem_t1_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
+    sem_t2_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
 
     # reset the generators
     dataset = datasets.SpaceNet7CDDataset(cfg=cfg, run_type='training')
@@ -57,7 +59,8 @@ def run_training(cfg):
         print(f'Starting epoch {epoch}/{epochs}.')
 
         start = timeit.default_timer()
-        loss_set = []
+
+        loss_set, sem_loss_set, change_loss_set = [], [], []
 
         for i, batch in enumerate(dataloader):
 
@@ -66,15 +69,27 @@ def run_training(cfg):
 
             x_t1 = batch['x_t1'].to(device)
             x_t2 = batch['x_t2'].to(device)
+            logits_change, logits_sem_t1, logits_sem_t2 = net(x_t1, x_t2)
 
-            logits, _, _ = net(x_t1, x_t2)
-
+            # change detection
             gt_change = batch['y_change'].to(device)
+            change_loss = change_criterion(logits_change, gt_change)
 
-            loss = criterion(logits, gt_change)
+            # semantic segmentation
+            gt_sem_t1 = batch['y_sem_t1'].to(device)
+            gt_sem_t2 = batch['y_sem_t2'].to(device)
+
+            sem_t1_loss = sem_t1_criterion(logits_sem_t1, gt_sem_t1)
+            sem_t2_loss = sem_t2_criterion(logits_sem_t2, gt_sem_t2)
+            sem_loss = (sem_t1_loss + sem_t2_loss) / 2
+
+            loss = (change_loss + sem_loss) / 2
+
             loss.backward()
             optimizer.step()
 
+            sem_loss_set.append(sem_loss.item())
+            change_loss_set.append(change_loss.item())
             loss_set.append(loss.item())
 
             global_step += 1
@@ -84,12 +99,14 @@ def run_training(cfg):
                 print(f'Logging step {global_step} (epoch {epoch_float:.2f}).')
 
                 # evaluation on sample of training and validation set
-                evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step)
-                evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step)
+                evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
+                evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
 
                 # logging
                 time = timeit.default_timer() - start
                 wandb.log({
+                    'change_loss': np.mean(change_loss_set),
+                    'sem_loss': np.mean(sem_loss_set),
                     'loss': np.mean(loss_set),
                     'labeled_percentage': 100,
                     'time': time,
@@ -97,11 +114,11 @@ def run_training(cfg):
                     'epoch': epoch_float,
                 })
                 start = timeit.default_timer()
-                loss_set = []
+                loss_set, sem_loss_set, change_loss_set = [], [], []
 
             if cfg.DEBUG:
                 # testing evaluation
-                evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step)
+                evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
                 break
             # end of batch
 
@@ -114,8 +131,8 @@ def run_training(cfg):
             networks.save_checkpoint(net, optimizer, epoch, global_step, cfg)
 
             # logs to load network
-            evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step)
-            evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step)
+            evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
+            evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
 
 
 if __name__ == '__main__':

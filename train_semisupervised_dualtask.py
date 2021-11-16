@@ -30,7 +30,10 @@ def run_training(cfg):
     net.to(device)
     optimizer = optim.AdamW(net.parameters(), lr=cfg.TRAINER.LR, weight_decay=0.01)
 
-    criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
+    change_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
+    sem_t1_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
+    sem_t2_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
+    change_consistency_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
 
     # reset the generators
     dataset = datasets.SpaceNet7CDDataset(cfg=cfg, run_type='training')
@@ -58,6 +61,7 @@ def run_training(cfg):
 
         start = timeit.default_timer()
         loss_set = []
+        n_labeled, n_notlabeled = 0, 0
 
         for i, batch in enumerate(dataloader):
 
@@ -67,11 +71,42 @@ def run_training(cfg):
             x_t1 = batch['x_t1'].to(device)
             x_t2 = batch['x_t2'].to(device)
 
-            logits, _, _ = net(x_t1, x_t2)
+            logits_change, logits_sem_t1, logits_sem_t2 = net(x_t1, x_t2)
 
-            gt_change = batch['y_change'].to(device)
+            supervised_loss, consistency_loss = None, None
 
-            loss = criterion(logits, gt_change)
+            is_labeled = batch['is_labeled']
+            if is_labeled.any():
+                # change detection
+                gt_change = batch['y_change'].to(device)
+                change_loss = change_criterion(logits_change, gt_change)
+
+                # semantic segmentation
+                gt_sem_t1 = batch['y_sem_t1'].to(device)
+                gt_sem_t2 = batch['y_sem_t2'].to(device)
+
+                sem_t1_loss = sem_t1_criterion(logits_sem_t1, gt_sem_t1)
+                sem_t2_loss = sem_t2_criterion(logits_sem_t2, gt_sem_t2)
+
+                supervised_loss = change_loss + sem_t1_loss + sem_t2_loss
+            if not is_labeled.all():
+                not_labeled = torch.logical_not(is_labeled)
+                n_notlabeled += torch.sum(not_labeled).item()
+
+                y_pred_sem_t1 = torch.sigmoid(logits_sem_t1)
+                y_pred_sem_t2 = torch.sigmoid(logits_sem_t2)
+                y_pred_change_sem = torch.sub(y_pred_sem_t2, y_pred_sem_t1)
+                y_pred_change = torch.sigmoid(y_pred_change_sem)
+                consistency_loss = change_consistency_criterion(y_pred_change[not_labeled,],
+                                                                y_pred_change_sem[not_labeled,])
+
+            if supervised_loss is None and consistency_loss is not None:
+                loss = consistency_loss
+            elif supervised_loss is not None and consistency_loss is not None:
+                loss = supervised_loss + consistency_loss
+            else:
+                loss = supervised_loss
+
             loss.backward()
             optimizer.step()
 

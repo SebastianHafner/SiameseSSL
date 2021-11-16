@@ -64,13 +64,13 @@ class UNet(nn.Module):
         self.decoder = Decoder(cfg)
         self.outc = OutConv(topology[0], n_classes)
 
-    def forward(self, x_t1: torch.Tensor, x_t2: torch.Tensor):
+    def forward(self, x_t1: torch.Tensor, x_t2: torch.Tensor) -> tuple:
         x = torch.cat((x_t1, x_t2), dim=1)
         x = self.inc(x)
         features = self.encoder(x)
         x = self.decoder(features)
         out = self.outc(x)
-        return out
+        return out, None, None
 
 
 class SiameseUNet(nn.Module):
@@ -89,7 +89,7 @@ class SiameseUNet(nn.Module):
 
         self.outc = OutConv(topology[0], n_classes)
 
-    def forward(self, x_t1: torch.Tensor, x_t2: torch.Tensor) -> torch.Tensor:
+    def forward(self, x_t1: torch.Tensor, x_t2: torch.Tensor) -> tuple:
 
         x1_t1 = self.inc(x_t1)
         features_t1 = self.encoder(x1_t1)
@@ -104,7 +104,7 @@ class SiameseUNet(nn.Module):
         x2 = self.decoder(features_diff)
         out = self.outc(x2)
 
-        return out
+        return out, None, None
 
 
 class DualTaskSiameseUNet(nn.Module):
@@ -112,36 +112,41 @@ class DualTaskSiameseUNet(nn.Module):
         super(DualTaskSiameseUNet, self).__init__()
         self.cfg = cfg
 
-        n_channels = cfg.MDOEL.IN_CHANNELS
+        n_channels = cfg.MODEL.IN_CHANNELS
         n_classes = cfg.MODEL.OUT_CHANNELS
         topology = cfg.MODEL.TOPOLOGY
 
         self.inc = InConv(n_channels, topology[0], DoubleConv)
 
         self.encoder = Encoder(cfg)
-        self.decoder_cd = Decoder(cfg)
-        self.decoder_ss = Decoder(cfg)
+        self.decoder_change = Decoder(cfg)
+        self.decoder_sem = Decoder(cfg)
 
-        self.outc_cd = OutConv(topology[0], n_classes)
-        self.outc_ss = OutConv(topology[0], n_classes)
+        self.outc_change = OutConv(topology[0], n_classes)
+        self.outc_sem = OutConv(topology[0], n_classes)
 
     def forward(self, x_t1: torch.Tensor, x_t2: torch.Tensor) -> list:
         x1_t1 = self.inc(x_t1)
         features_t1 = self.encoder(x1_t1)
-        out_ss_t1 = self.decoder_ss(features_t1)
 
         x1_t2 = self.inc(x_t2)
         features_t2 = self.encoder(x1_t2)
-        out_ss_t2 = self.decoder_ss(features_t2)
 
         features_diff = []
         for f_t1, f_t2 in zip(features_t1, features_t2):
             f_diff = torch.sub(f_t2, f_t1)
             features_diff.append(f_diff)
-        x2 = self.decoder(features_diff)
-        out_cd = self.outc_cd(x2)
 
-        return out_cd, out_ss_t1, out_ss_t2
+        x2 = self.decoder_change(features_diff)
+        out_change = self.outc_change(x2)
+
+        x2_t2 = self.decoder_sem(features_t2)
+        out_sem_t2 = self.outc_sem(x2_t2)
+
+        x2_t1 = self.decoder_sem(features_t1)
+        out_sem_t1 = self.outc_sem(x2_t1)
+
+        return out_change, out_sem_t1, out_sem_t2
 
 
 class Encoder(nn.Module):
