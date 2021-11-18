@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 from pathlib import Path
 
-from utils import paths, experiment_manager
+from utils import experiment_manager
 
 
 def create_network(cfg):
@@ -21,8 +21,8 @@ def create_network(cfg):
 
 
 def save_checkpoint(network, optimizer, epoch, step, cfg: experiment_manager.CfgNode):
-    dirs = paths.load_paths()
-    save_file = Path(dirs.OUTPUT) / 'networks' / f'{cfg.NAME}_checkpoint{epoch}.pt'
+    save_file = Path(cfg.PATHS.OUTPUT) / 'networks' / f'{cfg.NAME}_checkpoint{epoch}.pt'
+    save_file.parent.mkdir(exist_ok=True)
     checkpoint = {
         'step': step,
         'network': network.state_dict(),
@@ -36,8 +36,7 @@ def load_checkpoint(epoch: float, cfg: experiment_manager.CfgNode, device: str, 
     net.to(device)
 
     if net_file is None:
-        dirs = paths.load_paths()
-        save_file = Path(dirs.OUTPUT) / 'networks' / f'{cfg.NAME}_checkpoint{epoch}.pt'
+        save_file = Path(cfg.PATHS.OUTPUT) / 'networks' / f'{cfg.NAME}_checkpoint{epoch}.pt'
         checkpoint = torch.load(save_file, map_location=device)
     else:
         checkpoint = torch.load(net_file, map_location=device)

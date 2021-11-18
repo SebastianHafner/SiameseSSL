@@ -79,13 +79,14 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
         self.transform = augmentations.compose_transformations(cfg, no_augmentations)
 
         # loading labeled samples (sn7 train set) and subset to run type aoi ids
-        self.aoi_ids = cfg.DATASET.TRAINING_IDS if run_type == 'training' else cfg.DATASET.VALIDATION_IDS
+        self.aoi_ids = list(cfg.DATASET.TRAINING_IDS) if run_type == 'training' else list(cfg.DATASET.VALIDATION_IDS)
         self.labeled = [True] * len(self.aoi_ids)
         self.metadata = geofiles.load_json(self.root_path / f'metadata_train.json')
         if self.include_unlabeled:
-            # TODO: add validation aoi ids but make sure they are used as unlabeled
-            # self.aoi_ids.extend(cfg.DATASET.VALIDATIOn_IDS)
-            aoi_ids_test = cfg.DATASET.TEST_IDS
+            aoi_ids_validation = list(cfg.DATASET.VALIDATION_IDS)
+            self.aoi_ids.extend(aoi_ids_validation)
+            self.labeled.extend([False] * len(aoi_ids_validation))
+            aoi_ids_test = list(cfg.DATASET.TEST_IDS)
             self.aoi_ids.extend(aoi_ids_test)
             self.labeled.extend([False] * len(aoi_ids_test))
             metadata_test = geofiles.load_json(self.root_path / f'metadata_test.json')

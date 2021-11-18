@@ -1,5 +1,5 @@
 _BASE_: "base.yaml"
-DEBUG: False
+DEBUG: True
 INFERENCE_CHECKPOINT: 20
 
 MODEL:

@@ -6,7 +6,6 @@ from collections import OrderedDict
 import yaml
 from fvcore.common.config import CfgNode as _CfgNode
 from pathlib import Path
-from utils import paths
 
 
 def default_argument_parser():
@@ -90,8 +89,7 @@ def setup_cfg(args):
 # loading cfg
 def load_cfg(config_name: str):
     cfg = new_config()
-    dirs = paths.load_paths()
-    cfg_file = Path(dirs.HOME) / 'configs' / f'{config_name}.yaml'
+    cfg_file = Path.cwd() / 'configs' / f'{config_name}.yaml'
     cfg.merge_from_file(str(cfg_file))
     cfg.NAME = config_name
     return cfg
