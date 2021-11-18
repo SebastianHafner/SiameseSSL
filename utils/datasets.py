@@ -64,79 +64,15 @@ class AbstractSpaceNet7Dataset(torch.utils.data.Dataset):
 
 
 # dataset for urban extraction with building footprints
-class SpaceNet7SSDataset(AbstractSpaceNet7Dataset):
-
-    def __init__(self, cfg: experiment_manager.CfgNode, run_type: str, no_augmentations: bool = False):
-        super().__init__(cfg, run_type)
-
-        # handling transformations of data
-        self.no_augmentations = no_augmentations
-        self.transform = augmentations.compose_transformations(cfg, no_augmentations)
-
-        # loading labeled samples (sn7 train set) and subset to run type aoi ids
-        self.aoi_ids = cfg.DATASET.TRAINING_IDS if run_type == 'train' else cfg.DATASET.TEST_IDS
-        data_file = self.root_path / f'metadata_train.json'
-        data = geofiles.load_json(data_file)
-        self.samples = []
-        for aoi_id in self.aoi_ids:
-            self.samples.extend(data[aoi_id])
-
-        self.length = len(self.samples)
-
-    def __getitem__(self, index):
-
-        sample = self.samples[index]
-
-        aoi_id = sample['aoi_id']
-        year = sample['year']
-        month = sample['month']
-        is_masked = sample['mask']
-        is_labeled = sample['label']
-
-        img = self._load_mosaic(aoi_id, 'train', year, month)
-
-        if is_labeled:
-            label = self._load_label(aoi_id, year, month)
-        else:
-            label = np.zeros((img.shape[0], img.shape[1], 1), dtype=np.float32)
-
-        if is_masked:
-            mask = self._load_mask(aoi_id, year, month)
-        else:
-            mask = np.zeros((img.shape[0], img.shape[1], 1), dtype=np.int8)
-
-        input_features, label = self.transform((img, label, mask))
-
-        item = {
-            'x': input_features,
-            'y': label,
-            'mask': mask,
-            'is_masked': is_masked,
-            'is_labeled': is_labeled,
-            'aoi_id': aoi_id,
-            'year': year,
-            'month': month,
-        }
-
-        return item
-
-    def __len__(self):
-        return self.length
-
-    def __str__(self):
-        return f'Dataset with {self.length} samples.'
-
-
-# dataset for urban extraction with building footprints
 class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
     def __init__(self, cfg: experiment_manager.CfgNode, run_type: str, no_augmentations: bool = False,
-                 dataset_mode: str = None, disable_multiplier: bool = False):
+                 dataset_mode: str = None, disable_multiplier: bool = False, disable_unlabeled: bool = False):
         super().__init__(cfg, run_type)
 
         self.dataset_mode = cfg.DATALOADER.MODE if dataset_mode is None else dataset_mode
         self.include_building_labels = cfg.DATALOADER.INCLUDE_BUILDING_LABELS
-        self.include_unlabeled = cfg.DATALOADER.INCLUDE_UNLABELED
+        self.include_unlabeled = True if cfg.DATALOADER.INCLUDE_UNLABELED and not disable_unlabeled else False
 
         # handling transformations of data
         self.no_augmentations = no_augmentations
@@ -144,24 +80,28 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
         # loading labeled samples (sn7 train set) and subset to run type aoi ids
         self.aoi_ids = cfg.DATASET.TRAINING_IDS if run_type == 'training' else cfg.DATASET.VALIDATION_IDS
+        self.labeled = [True] * len(self.aoi_ids)
         self.metadata = geofiles.load_json(self.root_path / f'metadata_train.json')
         if self.include_unlabeled:
+            # TODO: add validation aoi ids but make sure they are used as unlabeled
             # self.aoi_ids.extend(cfg.DATASET.VALIDATIOn_IDS)
-            self.aoi_ids.extend(cfg.DATASET.TEST_IDS)
+            aoi_ids_test = cfg.DATASET.TEST_IDS
+            self.aoi_ids.extend(aoi_ids_test)
+            self.labeled.extend([False] * len(aoi_ids_test))
             metadata_test = geofiles.load_json(self.root_path / f'metadata_test.json')
             for aoi_id, timestamps in metadata_test.items():
                 self.metadata[aoi_id] = timestamps
         if not disable_multiplier:
             self.aoi_ids = self.aoi_ids * cfg.DATALOADER.TRAINING_SITES_MULTIPLIER
-
-
-
+            self.labeled = self.labeled * cfg.DATALOADER.TRAINING_SITES_MULTIPLIER
 
         self.length = len(self.aoi_ids)
 
     def __getitem__(self, index):
 
         aoi_id = self.aoi_ids[index]
+        labeled = self.labeled[index]
+        dataset = 'test' if aoi_id in self.cfg.DATASET.TEST_IDS else 'train'
 
         timestamps = self.metadata[aoi_id]
         # TODO: make this work for masked data
@@ -175,17 +115,20 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
         year_t1, month_t1 = timestamps[indices[0]]['year'], timestamps[indices[0]]['month']
         year_t2, month_t2 = timestamps[indices[1]]['year'], timestamps[indices[1]]['month']
 
-        img_t1 = self._load_mosaic(aoi_id, 'train', year_t1, month_t1)
-        img_t2 = self._load_mosaic(aoi_id, 'train', year_t2, month_t2)
+        img_t1 = self._load_mosaic(aoi_id, dataset, year_t1, month_t1)
+        img_t2 = self._load_mosaic(aoi_id, dataset, year_t2, month_t2)
         imgs = np.concatenate((img_t1, img_t2), axis=-1)
 
-        change = self._load_change_label(aoi_id, year_t1, month_t1, year_t2, month_t2)
-
-        if self.include_building_labels:
-            buildings_t1 = self._load_building_label(aoi_id, year_t1, month_t1)
-            buildings_t2 = self._load_building_label(aoi_id, year_t2, month_t2)
-            buildings = np.concatenate((buildings_t1, buildings_t2), axis=-1).astype(np.float32)
+        if labeled:
+            change = self._load_change_label(aoi_id, year_t1, month_t1, year_t2, month_t2)
+            if self.include_building_labels:
+                buildings_t1 = self._load_building_label(aoi_id, year_t1, month_t1)
+                buildings_t2 = self._load_building_label(aoi_id, year_t2, month_t2)
+                buildings = np.concatenate((buildings_t1, buildings_t2), axis=-1).astype(np.float32)
+            else:
+                buildings = np.zeros((change.shape[0], change.shape[1], 2), dtype=np.float32)
         else:
+            change = np.zeros((img_t1.shape[0], img_t1.shape[1], 1), dtype=np.float32)
             buildings = np.zeros((change.shape[0], change.shape[1], 2), dtype=np.float32)
 
         imgs, buildings, change = self.transform((imgs, buildings, change))
@@ -200,6 +143,7 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
             'month_t1': month_t1,
             'year_t2': year_t2,
             'month_t2': month_t2,
+            'is_labeled': labeled,
         }
 
         if self.include_building_labels:

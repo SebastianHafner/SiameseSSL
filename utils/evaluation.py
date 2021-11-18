@@ -10,7 +10,7 @@ def model_evaluation(net, cfg, device, run_type: str, epoch: float, step: int, e
     measurer_change = metrics.MultiThresholdMetric(thresholds)
     measurer_sem = metrics.MultiThresholdMetric(thresholds)
     ds = datasets.SpaceNet7CDDataset(cfg, run_type, no_augmentations=True, dataset_mode='first_last',
-                                     disable_multiplier=True)
+                                     disable_multiplier=True, disable_unlabeled=True)
 
     net.to(device)
     net.eval()
