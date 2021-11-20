@@ -1,4 +1,4 @@
-_BASE_: "base.yaml"
+_BASE_: "regional_split.yaml"
 DEBUG: False
 INFERENCE_CHECKPOINT: 20
 
@@ -7,4 +7,3 @@ MODEL:
 
 DATALOADER:
   INCLUDE_BUILDING_LABELS: True
-  INCLUDE_UNLABELED: True

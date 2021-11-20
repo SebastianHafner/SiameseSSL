@@ -1,0 +1,6 @@
+_BASE_: "regional.yaml"
+DEBUG: False
+INFERENCE_CHECKPOINT: 100
+
+MODEL:
+  TYPE: 'siameseunet'

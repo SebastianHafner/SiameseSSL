@@ -1,3 +1,5 @@
+_BASE_: "base.yaml"
+
 DATASET:
   TRAINING_IDS: [
     'L15-0357E-1223N_1429_3296_13',
