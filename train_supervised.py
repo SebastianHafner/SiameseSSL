@@ -9,6 +9,7 @@ from torch.utils import data as torch_data
 from tabulate import tabulate
 import wandb
 import numpy as np
+from pathlib import Path
 
 from utils import networks, datasets, loss_functions, evaluation, experiment_manager
 
@@ -138,6 +139,7 @@ if __name__ == '__main__':
             config=cfg,
             project='ssl_siamese',
             tags=['ssl', 'cd', 'siamese', 'spacenet7', ],
+            dir=Path.cwd(),
         )
 
     try:
