@@ -2,82 +2,74 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
+import argparse
+from pathlib import Path
 from utils import experiment_manager, networks, datasets
 
 
-def qual_assessment(config_name: str, run_type: str = 'validation'):
-    cfg = experiment_manager.load_cfg(config_name)
+def qualitative_assessment(cfg: experiment_manager.CfgNode, run_type: str = 'validation'):
     net, *_ = networks.load_checkpoint(cfg.INFERENCE_CHECKPOINT, cfg, 'cpu')
     net.eval()
-    ds = datasets.SpaceNet7S1S2Dataset(cfg, run_type, 'first_last', no_augmentations=True, include_unlabeled=False,
-                                       disable_multiplier=True)
+    ds = datasets.SpaceNet7CDDataset(cfg, run_type, dataset_mode='first_last', no_augmentations=True,
+                                     disable_unlabeled=True, disable_multiplier=True)
 
     for item in ds:
-        x = item['x'].unsqueeze(0)
-        y_pred = net(x)
-        y_pred = torch.sigmoid(y_pred).squeeze().detach().numpy()
-        y_gts = item['y'].squeeze().numpy()
-        _, _, s2_t1, s2_t2 = ds.split_item_x(x)
+        aoi_id = item['aoi_id']
+        if aoi_id == 'L15-0571E-1075N_2287_3888_13':
+            x_t1 = item['x_t1']
+            x_t2 = item['x_t2']
+            logits_change, logits_sem_t1, logits_sem_t2 = net(x_t1.unsqueeze(0), x_t2.unsqueeze(0))
+            y_pred_change = torch.sigmoid(logits_change).squeeze().detach()
+            y_pred_sem_t1 = torch.sigmoid(logits_sem_t1).squeeze().detach()
+            y_pred_sem_t2 = torch.sigmoid(logits_sem_t2).squeeze().detach()
 
-        fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+            gt_change = item['y_change'].squeeze()
+            gt_sem_t1 = item['y_sem_t1'].squeeze()
+            gt_sem_t2 = item['y_sem_t2'].squeeze()
 
-        bands = [2, 1, 0]  # [6, 2, 1]
-        scale_factor = .3
-        img_s2_t1 = np.clip(s2_t1.squeeze()[bands].numpy().transpose((1, 2, 0)) / scale_factor, 0, 1)
-        axs[0, 0].imshow(img_s2_t1)
-        img_s2_t2 = np.clip(s2_t2.squeeze()[bands].numpy().transpose((1, 2, 0)) / scale_factor, 0, 1)
-        axs[0, 1].imshow(img_s2_t2)
-        axs[1, 0].imshow(y_gts, vmin=0, vmax=1, cmap='gray')
-        axs[1, 1].imshow(y_pred, vmin=0, vmax=1, cmap='gray')
+            fig, axs = plt.subplots(2, 4, figsize=(20, 10))
+            axs[0, 0].imshow(x_t1.numpy().transpose((1, 2, 0)))
+            axs[1, 0].imshow(x_t2.numpy().transpose((1, 2, 0)))
 
-        for _, ax in np.ndenumerate(axs):
-            ax.set_axis_off()
+            axs[0, 1].imshow(gt_sem_t1.numpy(), cmap='gray')
+            axs[1, 1].imshow(gt_sem_t2.numpy(), cmap='gray')
 
-        plt.show()
-        plt.close(fig)
+            axs[0, 2].imshow(y_pred_sem_t1.numpy(), cmap='gray')
+            axs[1, 2].imshow(y_pred_sem_t2.numpy(), cmap='gray')
 
+            axs[0, 3].imshow(gt_change.numpy(), cmap='gray')
+            axs[1, 3].imshow(y_pred_change.numpy(), cmap='gray')
 
-def quan_assessment(config_name: str, run_type: str = 'validation'):
-    cfg = experiment_manager.load_cfg(config_name)
-    net, *_ = networks.load_checkpoint(cfg.INFERENCE_CHECKPOINT, cfg, 'cpu')
-    net.eval()
-    ds = datasets.SpaceNet7S1S2Dataset(cfg, run_type, 'first_last', no_augmentations=True, include_unlabeled=False,
-                                       disable_multiplier=True)
+            for _, ax in np.ndenumerate(axs):
+                ax.set_axis_off()
 
-    for item in ds:
-        x = item['x'].unsqueeze(0)
-        y_pred = net(x)
-        y_pred = torch.sigmoid(y_pred).squeeze().detach().numpy()
+            out_file = Path(cfg.PATHS.OUTPUT) / 'plots' / f'{aoi_id}.png'
+            plt.savefig(out_file, dpi=300, bbox_inches='tight')
+
+            # plt.show()
+            plt.close(fig)
 
 
-def qual_assessment_stockholm(config_name: str):
-    cfg = experiment_manager.load_cfg(config_name)
-    net, *_ = networks.load_checkpoint(cfg.INFERENCE_CHECKPOINT, cfg, 'cpu')
-    net.eval()
+def assessment_argument_parser():
+    # https://docs.python.org/3/library/argparse.html#the-add-argument-method
+    parser = argparse.ArgumentParser(description="Experiment Args")
 
-    ds = datasets.StockholmS1S2Dataset(cfg, from_date='2015-08', to_date='2021-04')
+    parser.add_argument('-c', "--config-file", dest='config_file', required=True, help="path to config file")
+    parser.add_argument('-o', "--output-dir", dest='output_dir', required=True, help="path to output directory")
+    parser.add_argument('-d', "--dataset-dir", dest='dataset_dir', default="", required=True,
+                        help="path to output directory")
+    parser.add_argument('-r', "--run-type", dest='run_type', default="validation", required=False, help="run type")
 
-    with torch.no_grad():
-        for i in tqdm(range(len(ds))):
-            patch = ds.__getitem__(i)
-            img = patch['x']
-            logits = net(img.unsqueeze(0))
-            prob = torch.sigmoid(logits) * 100
-            prob = prob.squeeze().cpu().numpy().astype('uint8')
-            prob = np.clip(prob, 0, 100)
-            center_prob = prob[dataset.patch_size:dataset.patch_size * 2, dataset.patch_size:dataset.patch_size * 2]
-
-            i_start = patch['i']
-            i_end = i_start + dataset.patch_size
-            j_start = patch['j']
-            j_end = j_start + dataset.patch_size
-            prob_output[i_start:i_end, j_start:j_end, 0] = center_prob
-
-    output_file = save_path / f'prob_{site}_{config_name}.tif'
-    write_tif(output_file, prob_output, transform, crs)
-    pass
+    parser.add_argument(
+        "opts",
+        help="Modify config options using the command-line",
+        default=None,
+        nargs=argparse.REMAINDER,
+    )
+    return parser
 
 
 if __name__ == '__main__':
-    qual_assessment('opticalunet_baseline', run_type='training')
-    # qual_assessment_stockholm('opticalunet_baseline')
+    args = assessment_argument_parser().parse_known_args()[0]
+    cfg = experiment_manager.setup_cfg(args)
+    qualitative_assessment(cfg, run_type=args.run_type)

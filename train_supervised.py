@@ -139,7 +139,6 @@ if __name__ == '__main__':
             config=cfg,
             project='ssl_siamese',
             tags=['ssl', 'cd', 'siamese', 'spacenet7', ],
-            dir=Path.cwd(),
         )
 
     try:
