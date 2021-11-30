@@ -1,0 +1,14 @@
+_BASE_: "base.yaml"
+DEBUG: False
+INFERENCE_CHECKPOINT: 20
+
+MODEL:
+  TYPE: 'dtsiameseunet'
+
+DATALOADER:
+  INCLUDE_BUILDING_LABELS: True
+
+AUGMENTATION:
+  CROP_SIZE: 64
+  IMAGE_OVERSAMPLING_TYPE: 'importance' # [none, importance]
+  GAMMA_CORRECTION: True

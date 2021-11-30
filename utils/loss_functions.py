@@ -25,6 +25,8 @@ def get_criterion(loss_type, negative_weight: float = 1, positive_weight: float 
         criterion = iou_loss
     elif loss_type == 'DiceLikeLoss':
         criterion = dice_like_loss
+    elif loss_type == 'L2':
+        criterion = nn.MSELoss()
     else:
         raise Exception(f'unknown loss {loss_type}')
 

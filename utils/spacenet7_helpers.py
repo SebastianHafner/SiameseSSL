@@ -23,7 +23,7 @@ def get_all_dates(spacenet7_path: str, dataset: str, aoi_id: str, sort_by_date: 
 
 def is_masked(spacenet7_path: str, dataset: str, aoi_id: str, year: int, month: int) -> bool:
     folder = Path(spacenet7_path) / dataset / aoi_id / 'UDM_masks'
-    mask_file = folder / f'global_monthly_{year}_{month:02d}_mosaic_{aoi_id}.tif'
+    mask_file = folder / f'global_monthly_{year}_{month:02d}_mosaic_{aoi_id}_UDM.tif'
     return mask_file.exists()
 
 
