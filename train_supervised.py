@@ -137,7 +137,7 @@ if __name__ == '__main__':
         wandb.init(
             name=cfg.NAME,
             config=cfg,
-            project='ssl_siamese',
+            project='siamese_ssl',
             tags=['ssl', 'cd', 'siamese', 'spacenet7', ],
         )
 
