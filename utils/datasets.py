@@ -98,6 +98,8 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
             self.labeled = self.labeled * cfg.DATALOADER.TRAINING_SITES_MULTIPLIER
 
         manager = multiprocessing.Manager()
+
+        self.test_ids = manager.list(list(self.cfgDATASET.TEST_IDS))
         self.aoi_ids = manager.list(self.aoi_ids)
         self.labeled = manager.list(self.labeled)
         self.metadata = manager.dict(self.metadata)
@@ -108,7 +110,7 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
         aoi_id = self.aoi_ids[index]
         labeled = self.labeled[index]
-        dataset = 'test' if aoi_id in self.cfg.DATASET.TEST_IDS else 'train'
+        dataset = 'test' if aoi_id in self.test_ids else 'train'
 
         timestamps = self.metadata[aoi_id]
         # TODO: make this work for masked data
