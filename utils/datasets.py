@@ -99,7 +99,7 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
         manager = multiprocessing.Manager()
 
-        self.test_ids = manager.list(list(self.cfgDATASET.TEST_IDS))
+        self.test_ids = manager.list(list(self.cfg.DATASET.TEST_IDS))
         self.aoi_ids = manager.list(self.aoi_ids)
         self.labeled = manager.list(self.labeled)
         self.metadata = manager.dict(self.metadata)
