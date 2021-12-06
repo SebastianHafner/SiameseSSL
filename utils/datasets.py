@@ -2,6 +2,7 @@ import torch
 from pathlib import Path
 from abc import abstractmethod
 import numpy as np
+import multiprocessing
 from utils import augmentations, experiment_manager, geofiles, spacenet7_helpers
 
 
@@ -95,6 +96,11 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
         if not disable_multiplier:
             self.aoi_ids = self.aoi_ids * cfg.DATALOADER.TRAINING_SITES_MULTIPLIER
             self.labeled = self.labeled * cfg.DATALOADER.TRAINING_SITES_MULTIPLIER
+
+        manager = multiprocessing.Manager()
+        self.aoi_ids = manager.list(self.aoi_ids)
+        self.labeled = manager.list(self.labeled)
+        self.metadata = manager.dict(self.metadata)
 
         self.length = len(self.aoi_ids)
 
