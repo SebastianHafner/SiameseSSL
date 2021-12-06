@@ -20,7 +20,7 @@ MODEL:
   TOPOLOGY: [64, 128, ]
 
 DATALOADER:
-  NUM_WORKER: 4
+  NUM_WORKER: 2
   SHUFFLE: True
   MODE: 'all' # 'first_last' or 'all'
   TRAINING_SITES_MULTIPLIER: 100
