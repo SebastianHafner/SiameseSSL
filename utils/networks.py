@@ -123,6 +123,7 @@ class DualTaskSiameseUNet(nn.Module):
 
         self.outc_change = OutConv(topology[0], n_classes)
         self.outc_sem = OutConv(topology[0], n_classes)
+        self.outc_sem_change = OutConv(2, 1)
 
     def forward(self, x_t1: torch.Tensor, x_t2: torch.Tensor) -> list:
         x1_t1 = self.inc(x_t1)

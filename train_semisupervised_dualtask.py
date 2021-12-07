@@ -100,11 +100,18 @@ def run_training(cfg):
 
                 y_pred_sem_t1 = torch.sigmoid(logits_sem_t1)
                 y_pred_sem_t2 = torch.sigmoid(logits_sem_t2)
-                y_pred_change_sem = torch.sub(y_pred_sem_t2, y_pred_sem_t1)
-                y_pred_change = torch.sigmoid(logits_change)
-                # TODO: fix sigmoid for l2
-                consistency_loss = change_consistency_criterion(logits_change[is_not_labeled,],
-                                                                y_pred_change_sem[is_not_labeled,])
+
+                logits_change_sem = net.outc_sem_change(torch.cat((logits_sem_t1, logits_sem_t2), dim=1))
+                y_pred_change_sem = torch.sigmoid(logits_change_sem)
+                # y_pred_change_sem = torch.sub(y_pred_sem_t2, y_pred_sem_t1)
+
+                if cfg.CONSISTENCY_TRAINER.LOSS_TYPE == 'L2':
+                    y_pred_change = torch.sigmoid(logits_change)
+                    consistency_loss = change_consistency_criterion(y_pred_change[is_not_labeled,],
+                                                                    y_pred_change_sem[is_not_labeled,])
+                else:
+                    consistency_loss = change_consistency_criterion(logits_change[is_not_labeled,],
+                                                                    y_pred_change_sem[is_not_labeled,])
                 consistency_loss = consistency_loss * cfg.CONSISTENCY_TRAINER.LOSS_FACTOR
                 consistency_loss_set.append(consistency_loss.item())
 
