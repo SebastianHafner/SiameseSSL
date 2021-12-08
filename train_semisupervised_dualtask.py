@@ -33,6 +33,7 @@ def run_training(cfg):
     change_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
     sem_t1_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
     sem_t2_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
+    sem_change_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
     change_consistency_criterion = loss_functions.get_criterion(cfg.CONSISTENCY_TRAINER.LOSS_TYPE)
 
     # reset the generators
@@ -72,6 +73,8 @@ def run_training(cfg):
             x_t2 = batch['x_t2'].to(device)
 
             logits_change, logits_sem_t1, logits_sem_t2 = net(x_t1, x_t2)
+            logits_change_sem = net.outc_sem_change(torch.cat((logits_sem_t1, logits_sem_t2), dim=1))
+            y_pred_change_sem = torch.sigmoid(logits_change_sem)
 
             supervised_loss, consistency_loss = None, None
 
@@ -92,18 +95,16 @@ def run_training(cfg):
                 sem_loss = (sem_t1_loss + sem_t2_loss) / 2
                 supervised_loss = change_loss + sem_loss
 
+                if cfg.CONSISTENCY_TRAINER.ENABLE_SEMANTIC_CHANGE_LOSS:
+                    sem_change_loss = change_criterion(logits_change_sem[is_labeled,], gt_change[is_labeled,])
+                    supervised_loss = supervised_loss + sem_change_loss
+
                 sem_loss_set.append(sem_loss.item())
                 change_loss_set.append(change_loss.item())
+
             if not is_labeled.all():
                 is_not_labeled = torch.logical_not(is_labeled)
                 n_notlabeled += torch.sum(is_not_labeled).item()
-
-                y_pred_sem_t1 = torch.sigmoid(logits_sem_t1)
-                y_pred_sem_t2 = torch.sigmoid(logits_sem_t2)
-
-                logits_change_sem = net.outc_sem_change(torch.cat((logits_sem_t1, logits_sem_t2), dim=1))
-                y_pred_change_sem = torch.sigmoid(logits_change_sem)
-                # y_pred_change_sem = torch.sub(y_pred_sem_t2, y_pred_sem_t1)
 
                 if cfg.CONSISTENCY_TRAINER.LOSS_TYPE == 'L2':
                     y_pred_change = torch.sigmoid(logits_change)
