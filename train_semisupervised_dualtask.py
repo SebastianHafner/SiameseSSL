@@ -95,7 +95,7 @@ def run_training(cfg):
                 sem_loss = (sem_t1_loss + sem_t2_loss) / 2
                 supervised_loss = change_loss + sem_loss
 
-                if cfg.CONSISTENCY_TRAINER.ENABLE_SEMANTIC_CHANGE_LOSS:
+                if cfg.MODEL.ENABLE_SEMANTIC_CHANGE_LOSS:
                     sem_change_loss = change_criterion(logits_change_sem[is_labeled,], gt_change[is_labeled,])
                     supervised_loss = supervised_loss + sem_change_loss
 
