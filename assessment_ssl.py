@@ -42,6 +42,7 @@ def qualitative_assessment_change(cfg: experiment_manager.CfgNode, run_type: str
 
         for _, ax in np.ndenumerate(axs):
             ax.set_axis_off()
+        plt.tight_layout()
 
         out_file = Path(cfg.PATHS.OUTPUT) / 'plots' / 'assessment_change_ssl' / f'{aoi_id}.png'
         out_file.parent.mkdir(exist_ok=True)
@@ -87,6 +88,7 @@ def qualitative_assessment_sem(cfg: experiment_manager.CfgNode, run_type: str = 
 
         for _, ax in np.ndenumerate(axs):
             ax.set_axis_off()
+        plt.tight_layout()
 
         out_file = Path(cfg.PATHS.OUTPUT) / 'plots' / 'assessment_sem_ssl' / f'{aoi_id}.png'
         out_file.parent.mkdir(exist_ok=True)
