@@ -93,12 +93,13 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
                 metadata_test = geofiles.load_json(self.root_path / f'metadata_test.json')
                 for aoi_id, timestamps in metadata_test.items():
                     self.metadata[aoi_id] = timestamps
+            aoi_ids_unlabelled = sorted(aoi_ids_unlabelled)
             self.aoi_ids.extend(aoi_ids_unlabelled)
             self.labeled.extend([False] * len(aoi_ids_unlabelled))
 
         if not disable_multiplier:
             self.aoi_ids = self.aoi_ids * cfg.DATALOADER.TRAINING_MULTIPLIER
-            self.labeled = self.aoi_ids * cfg.DATALOADER.TRAINING_MULTIPLIER
+            self.labeled = self.labeled * cfg.DATALOADER.TRAINING_MULTIPLIER
 
         manager = multiprocessing.Manager()
         self.test_ids = manager.list(list(self.cfg.DATASET.TEST_IDS))
