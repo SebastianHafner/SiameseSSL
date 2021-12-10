@@ -1,6 +1,5 @@
 _BASE_: "regional_split.yaml"
 DEBUG: False
-INFERENCE_CHECKPOINT: 100
 
 MODEL:
   TYPE: 'dtsiameseunet'

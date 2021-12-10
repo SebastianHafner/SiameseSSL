@@ -31,8 +31,7 @@ def run_training(cfg):
     optimizer = optim.AdamW(net.parameters(), lr=cfg.TRAINER.LR, weight_decay=0.01)
 
     change_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
-    sem_t1_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
-    sem_t2_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
+    sem_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
 
     # reset the generators
     dataset = datasets.SpaceNet7CDDataset(cfg=cfg, run_type='training')
@@ -79,8 +78,8 @@ def run_training(cfg):
             gt_sem_t1 = batch['y_sem_t1'].to(device)
             gt_sem_t2 = batch['y_sem_t2'].to(device)
 
-            sem_t1_loss = sem_t1_criterion(logits_sem_t1, gt_sem_t1)
-            sem_t2_loss = sem_t2_criterion(logits_sem_t2, gt_sem_t2)
+            sem_t1_loss = sem_criterion(logits_sem_t1, gt_sem_t1)
+            sem_t2_loss = sem_criterion(logits_sem_t2, gt_sem_t2)
             sem_loss = (sem_t1_loss + sem_t2_loss) / 2
 
             loss = (change_loss + sem_loss) / 2

@@ -68,12 +68,11 @@ class AbstractSpaceNet7Dataset(torch.utils.data.Dataset):
 class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
     def __init__(self, cfg: experiment_manager.CfgNode, run_type: str, no_augmentations: bool = False,
-                 dataset_mode: str = None, disable_multiplier: bool = False, disable_unlabeled: bool = False):
+                 dataset_mode: str = None, disable_unlabeled: bool = False):
         super().__init__(cfg, run_type)
 
         self.dataset_mode = cfg.DATALOADER.MODE if dataset_mode is None else dataset_mode
         self.include_building_labels = cfg.DATALOADER.INCLUDE_BUILDING_LABELS
-        self.include_unlabeled = True if cfg.DATALOADER.INCLUDE_UNLABELED and not disable_unlabeled else False
 
         # handling transformations of data
         self.no_augmentations = no_augmentations
@@ -83,22 +82,21 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
         self.aoi_ids = list(cfg.DATASET.TRAINING_IDS) if run_type == 'training' else list(cfg.DATASET.VALIDATION_IDS)
         self.labeled = [True] * len(self.aoi_ids)
         self.metadata = geofiles.load_json(self.root_path / f'metadata_train.json')
-        if self.include_unlabeled:
-            aoi_ids_validation = list(cfg.DATASET.VALIDATION_IDS)
-            self.aoi_ids.extend(aoi_ids_validation)
-            self.labeled.extend([False] * len(aoi_ids_validation))
-            aoi_ids_test = list(cfg.DATASET.TEST_IDS)
-            self.aoi_ids.extend(aoi_ids_test)
-            self.labeled.extend([False] * len(aoi_ids_test))
-            metadata_test = geofiles.load_json(self.root_path / f'metadata_test.json')
-            for aoi_id, timestamps in metadata_test.items():
-                self.metadata[aoi_id] = timestamps
-        if not disable_multiplier:
-            self.aoi_ids = self.aoi_ids * cfg.DATALOADER.TRAINING_SITES_MULTIPLIER
-            self.labeled = self.labeled * cfg.DATALOADER.TRAINING_SITES_MULTIPLIER
+
+        # unlabeled data for semi-supervised learning
+        if (cfg.DATALOADER.INCLUDE_UNLABELED_VALIDATION or cfg.DATALOADER.INCLUDE_UNLABELED_TEST) and not disable_unlabeled:
+            aoi_ids_unlabelled = []
+            if cfg.DATALOADER.INCLUDE_UNLABELED_VALIDATION:
+                aoi_ids_unlabelled += list(cfg.DATASET.VALIDATION_IDS)
+            if cfg.DATALOADER.INCLUDE_UNLABELED_TEST:
+                aoi_ids_unlabelled += list(cfg.DATASET.TEST_IDS)
+                metadata_test = geofiles.load_json(self.root_path / f'metadata_test.json')
+                for aoi_id, timestamps in metadata_test.items():
+                    self.metadata[aoi_id] = timestamps
+            self.aoi_ids.extend(aoi_ids_unlabelled)
+            self.labeled.extend([False] * len(aoi_ids_unlabelled))
 
         manager = multiprocessing.Manager()
-
         self.test_ids = manager.list(list(self.cfg.DATASET.TEST_IDS))
         self.aoi_ids = manager.list(self.aoi_ids)
         self.labeled = manager.list(self.labeled)
@@ -113,7 +111,6 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
         dataset = 'test' if aoi_id in self.test_ids else 'train'
 
         timestamps = self.metadata[aoi_id]
-        # TODO: make this work for masked data
         timestamps = [ts for ts in timestamps if not ts['mask']]
 
         if self.dataset_mode == 'first_last':

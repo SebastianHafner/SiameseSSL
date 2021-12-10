@@ -31,9 +31,7 @@ def run_training(cfg):
     optimizer = optim.AdamW(net.parameters(), lr=cfg.TRAINER.LR, weight_decay=0.01)
 
     change_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
-    sem_t1_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
-    sem_t2_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
-    sem_change_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
+    sem_criterion = loss_functions.get_criterion(cfg.MODEL.LOSS_TYPE)
     change_consistency_criterion = loss_functions.get_criterion(cfg.CONSISTENCY_TRAINER.LOSS_TYPE)
 
     # reset the generators
@@ -61,7 +59,7 @@ def run_training(cfg):
         print(f'Starting epoch {epoch}/{epochs}.')
 
         start = timeit.default_timer()
-        loss_set, sem_loss_set, change_loss_set, consistency_loss_set = [], [], [], []
+        loss_set, sem_loss_set, change_loss_set, change_sem_loss_set, consistency_loss_set = [], [], [], [], []
         n_labeled, n_notlabeled = 0, 0
 
         for i, batch in enumerate(dataloader):
@@ -89,14 +87,15 @@ def run_training(cfg):
                 gt_sem_t1 = batch['y_sem_t1'].to(device)
                 gt_sem_t2 = batch['y_sem_t2'].to(device)
 
-                sem_t1_loss = sem_t1_criterion(logits_sem_t1[is_labeled, ], gt_sem_t1[is_labeled, ])
-                sem_t2_loss = sem_t2_criterion(logits_sem_t2[is_labeled, ], gt_sem_t2[is_labeled, ])
+                sem_t1_loss = sem_criterion(logits_sem_t1[is_labeled, ], gt_sem_t1[is_labeled, ])
+                sem_t2_loss = sem_criterion(logits_sem_t2[is_labeled, ], gt_sem_t2[is_labeled, ])
 
                 sem_loss = (sem_t1_loss + sem_t2_loss) / 2
                 supervised_loss = change_loss + sem_loss
 
                 if cfg.MODEL.ENABLE_SEMANTIC_CHANGE_LOSS:
                     sem_change_loss = change_criterion(logits_change_sem[is_labeled,], gt_change[is_labeled,])
+                    change_sem_loss_set.append(sem_change_loss.item())
                     supervised_loss = supervised_loss + sem_change_loss
 
                 sem_loss_set.append(sem_loss.item())
@@ -142,6 +141,7 @@ def run_training(cfg):
                 time = timeit.default_timer() - start
                 wandb.log({
                     'change_loss': np.mean(change_loss_set) if len(change_loss_set) > 0 else 0,
+                    'change_sem_loss': np.mean(change_sem_loss_set) if len(change_sem_loss_set) > 0 else 0,
                     'sem_loss': np.mean(sem_loss_set) if len(sem_loss_set) > 0 else 0,
                     'cons_loss': np.mean(consistency_loss_set) if len(consistency_loss_set) > 0 else 0,
                     'loss': np.mean(loss_set),
@@ -152,7 +152,7 @@ def run_training(cfg):
                 })
                 start = timeit.default_timer()
                 n_labeled, n_notlabeled = 0, 0
-                loss_set, sem_loss_set, change_loss_set, consistency_loss_set = [], [], [], []
+                loss_set, sem_loss_set, change_loss_set, change_sem_loss_set, consistency_loss_set = [], [], [], [], []
 
             if cfg.DEBUG:
                 # testing evaluation
