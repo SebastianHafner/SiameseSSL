@@ -108,6 +108,9 @@ def run_training(cfg):
 
         if not cfg.DEBUG:
             assert (epoch == epoch_float)
+            # evaluation on sample of training and validation set
+            evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step)
+            evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step)
         print(f'epoch float {epoch_float} (step {global_step}) - epoch {epoch}')
 
         if epoch in save_checkpoints and not cfg.DEBUG:
