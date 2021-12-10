@@ -5,7 +5,7 @@ from tqdm import tqdm
 from utils import datasets, metrics
 
 
-def model_evaluation(net, cfg, device, run_type: str, epoch: float, step: int, enable_sem: bool = False):
+def model_evaluation(net, cfg, device, run_type: str, epoch: int, enable_sem: bool = False):
     thresholds = torch.linspace(0.5, 1, 1).to(device)
     measurer_change = metrics.MultiThresholdMetric(thresholds)
     measurer_sem = metrics.MultiThresholdMetric(thresholds)
@@ -57,11 +57,12 @@ def model_evaluation(net, cfg, device, run_type: str, epoch: float, step: int, e
     print(f'{f1_change.item():.3f}', flush=True)
 
     if not cfg.DEBUG:
-        wandb.log({f'{run_type} change F1': f1_change,
-                   f'{run_type} change precision': precision_change,
-                   f'{run_type} change recall': recall_change,
-                   'step': step, 'epoch': epoch,
-                   })
+        wandb.log({
+            f'{run_type} change F1': f1_change,
+            f'{run_type} change precision': precision_change,
+            f'{run_type} change recall': recall_change,
+            'epoch': epoch,
+            })
         if enable_sem:
             f1s_sem = measurer_sem.compute_f1()
             precisions_sem, recalls_sem = measurer_sem.precision, measurer_sem.recall
@@ -72,8 +73,9 @@ def model_evaluation(net, cfg, device, run_type: str, epoch: float, step: int, e
 
             precision_sem = precisions_sem[argmax_f1_sem]
             recall_sem = recalls_sem[argmax_f1_sem]
-            wandb.log({f'{run_type} sem F1': f1_sem,
-                       f'{run_type} sem precision': precision_sem,
-                       f'{run_type} sem recall': recall_sem,
-                       'step': step, 'epoch': epoch,
-                       })
+            wandb.log({
+                f'{run_type} sem F1': f1_sem,
+                f'{run_type} sem precision': precision_sem,
+                f'{run_type} sem recall': recall_sem,
+                'epoch': epoch,
+                })

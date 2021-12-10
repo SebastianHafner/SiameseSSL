@@ -20,11 +20,11 @@ def create_network(cfg):
         raise Exception(f'Unknown network ({cfg.MODEL.TYPE}).')
 
 
-def save_checkpoint(network, optimizer, epoch, step, cfg: experiment_manager.CfgNode):
+def save_checkpoint(network, optimizer, epoch, cfg: experiment_manager.CfgNode):
     save_file = Path(cfg.PATHS.OUTPUT) / 'networks' / f'{cfg.NAME}_checkpoint{epoch}.pt'
     save_file.parent.mkdir(exist_ok=True)
     checkpoint = {
-        'step': step,
+        'epoch': epoch,
         'network': network.state_dict(),
         'optimizer': optimizer.state_dict()
     }

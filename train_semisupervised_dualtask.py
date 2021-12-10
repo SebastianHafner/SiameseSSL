@@ -130,47 +130,39 @@ def run_training(cfg):
             global_step += 1
             epoch_float = global_step / steps_per_epoch
 
-            if global_step % cfg.LOG_FREQ == 0 and not cfg.DEBUG:
-                print(f'Logging step {global_step} (epoch {epoch_float:.2f}).')
-
-                # evaluation on sample of training and validation set
-                evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
-                evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
-
-                # logging
-                time = timeit.default_timer() - start
-                wandb.log({
-                    'change_loss': np.mean(change_loss_set) if len(change_loss_set) > 0 else 0,
-                    'change_sem_loss': np.mean(change_sem_loss_set) if len(change_sem_loss_set) > 0 else 0,
-                    'sem_loss': np.mean(sem_loss_set) if len(sem_loss_set) > 0 else 0,
-                    'cons_loss': np.mean(consistency_loss_set) if len(consistency_loss_set) > 0 else 0,
-                    'loss': np.mean(loss_set),
-                    'labeled_percentage': n_labeled / (n_labeled + n_notlabeled) * 100,
-                    'time': time,
-                    'step': global_step,
-                    'epoch': epoch_float,
-                })
-                start = timeit.default_timer()
-                n_labeled, n_notlabeled = 0, 0
-                loss_set, sem_loss_set, change_loss_set, change_sem_loss_set, consistency_loss_set = [], [], [], [], []
-
-            if cfg.DEBUG:
-                # testing evaluation
-                evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
-                break
-            # end of batch
-
-        if not cfg.DEBUG:
-            assert (epoch == epoch_float)
+        assert (epoch == epoch_float)
         print(f'epoch float {epoch_float} (step {global_step}) - epoch {epoch}')
+        if not cfg.DEBUG:
+            print(f'Logging step {global_step} (epoch {epoch_float:.2f}).')
 
-        if epoch in save_checkpoints and not cfg.DEBUG:
-            print(f'saving network', flush=True)
-            networks.save_checkpoint(net, optimizer, epoch, global_step, cfg)
+            # evaluation on sample of training and validation set
+            evaluation.model_evaluation(net, cfg, device, 'training', epoch, enable_sem=True)
+            evaluation.model_evaluation(net, cfg, device, 'validation', epoch, enable_sem=True)
 
-            # logs to load network
-            evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
-            evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
+            # logging
+            time = timeit.default_timer() - start
+            wandb.log({
+                'change_loss': np.mean(change_loss_set) if len(change_loss_set) > 0 else 0,
+                'change_sem_loss': np.mean(change_sem_loss_set) if len(change_sem_loss_set) > 0 else 0,
+                'sem_loss': np.mean(sem_loss_set) if len(sem_loss_set) > 0 else 0,
+                'cons_loss': np.mean(consistency_loss_set) if len(consistency_loss_set) > 0 else 0,
+                'loss': np.mean(loss_set),
+                'labeled_percentage': n_labeled / (n_labeled + n_notlabeled) * 100,
+                'time': time,
+                'step': global_step,
+                'epoch': epoch_float,
+            })
+
+            if epoch in save_checkpoints:
+                print(f'saving network', flush=True)
+                networks.save_checkpoint(net, optimizer, epoch, cfg)
+        else:  # testing evaluation
+            evaluation.model_evaluation(net, cfg, device, 'validation', epoch, enable_sem=True)
+            break
+        start = timeit.default_timer()
+        loss_set, sem_loss_set, change_loss_set, change_sem_loss_set, consistency_loss_set = [], [], [], [], []
+        n_labeled, n_notlabeled = 0, 0
+        # end of epoch
 
 
 if __name__ == '__main__':

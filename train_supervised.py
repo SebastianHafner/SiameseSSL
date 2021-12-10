@@ -81,42 +81,34 @@ def run_training(cfg):
             global_step += 1
             epoch_float = global_step / steps_per_epoch
 
-            if global_step % cfg.LOG_FREQ == 0 and not cfg.DEBUG:
-                print(f'Logging step {global_step} (epoch {epoch_float:.2f}).')
-
-                # evaluation on sample of training and validation set
-                evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step)
-                evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step)
-
-                # logging
-                time = timeit.default_timer() - start
-                wandb.log({
-                    'loss': np.mean(loss_set),
-                    'labeled_percentage': 100,
-                    'time': time,
-                    'step': global_step,
-                    'epoch': epoch_float,
-                })
-                start = timeit.default_timer()
-                loss_set = []
-
-            if cfg.DEBUG:
-                # testing evaluation
-                evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step)
-                break
-            # end of batch
-
-        if not cfg.DEBUG:
-            assert (epoch == epoch_float)
+        assert (epoch == epoch_float)
         print(f'epoch float {epoch_float} (step {global_step}) - epoch {epoch}')
+        if not cfg.DEBUG:
+            print(f'Logging step {global_step} (epoch {epoch_float:.2f}).')
 
-        if epoch in save_checkpoints and not cfg.DEBUG:
-            print(f'saving network', flush=True)
-            networks.save_checkpoint(net, optimizer, epoch, global_step, cfg)
+            # evaluation on sample of training and validation set
+            evaluation.model_evaluation(net, cfg, device, 'training', epoch)
+            evaluation.model_evaluation(net, cfg, device, 'validation', epoch)
 
-            # logs to load network
-            evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step)
-            evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step)
+            # logging
+            time = timeit.default_timer() - start
+            wandb.log({
+                'loss': np.mean(loss_set),
+                'labeled_percentage': 100,
+                'time': time,
+                'step': global_step,
+                'epoch': epoch_float,
+            })
+
+            if epoch in save_checkpoints:
+                print(f'saving network', flush=True)
+                networks.save_checkpoint(net, optimizer, epoch, cfg)
+        else:  # testing evaluation
+            evaluation.model_evaluation(net, cfg, device, 'validation', epoch)
+            break
+        start = timeit.default_timer()
+        loss_set = []
+        # end of epoch
 
 
 if __name__ == '__main__':
