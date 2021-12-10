@@ -1,7 +1,6 @@
 import torch
 from torch.utils import data as torch_data
 import wandb
-from tqdm import tqdm
 from utils import datasets, metrics
 
 
@@ -10,7 +9,7 @@ def model_evaluation(net, cfg, device, run_type: str, epoch: float, step: int, e
     measurer_change = metrics.MultiThresholdMetric(thresholds)
     measurer_sem = metrics.MultiThresholdMetric(thresholds)
     ds = datasets.SpaceNet7CDDataset(cfg, run_type, no_augmentations=True, dataset_mode='first_last',
-                                     disable_unlabeled=True)
+                                     disable_multiplier=True, disable_unlabeled=True)
 
     net.to(device)
     net.eval()
@@ -56,24 +55,23 @@ def model_evaluation(net, cfg, device, run_type: str, epoch: float, step: int, e
 
     print(f'{f1_change.item():.3f}', flush=True)
 
-    if not cfg.DEBUG:
-        wandb.log({f'{run_type} change F1': f1_change,
-                   f'{run_type} change precision': precision_change,
-                   f'{run_type} change recall': recall_change,
+    wandb.log({f'{run_type} change F1': f1_change,
+               f'{run_type} change precision': precision_change,
+           f'{run_type} change recall': recall_change,
+               'step': step, 'epoch': epoch,
+               })
+    if enable_sem:
+        f1s_sem = measurer_sem.compute_f1()
+        precisions_sem, recalls_sem = measurer_sem.precision, measurer_sem.recall
+
+        # best f1 score for passed thresholds
+        f1_sem = f1s_sem.max()
+        argmax_f1_sem = f1s_sem.argmax()
+
+        precision_sem = precisions_sem[argmax_f1_sem]
+        recall_sem = recalls_sem[argmax_f1_sem]
+        wandb.log({f'{run_type} sem F1': f1_sem,
+                   f'{run_type} sem precision': precision_sem,
+                   f'{run_type} sem recall': recall_sem,
                    'step': step, 'epoch': epoch,
                    })
-        if enable_sem:
-            f1s_sem = measurer_sem.compute_f1()
-            precisions_sem, recalls_sem = measurer_sem.precision, measurer_sem.recall
-
-            # best f1 score for passed thresholds
-            f1_sem = f1s_sem.max()
-            argmax_f1_sem = f1s_sem.argmax()
-
-            precision_sem = precisions_sem[argmax_f1_sem]
-            recall_sem = recalls_sem[argmax_f1_sem]
-            wandb.log({f'{run_type} sem F1': f1_sem,
-                       f'{run_type} sem precision': precision_sem,
-                       f'{run_type} sem recall': recall_sem,
-                       'step': step, 'epoch': epoch,
-                       })

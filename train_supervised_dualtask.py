@@ -94,7 +94,7 @@ def run_training(cfg):
             global_step += 1
             epoch_float = global_step / steps_per_epoch
 
-            if global_step % cfg.LOG_FREQ == 0 and not cfg.DEBUG:
+            if global_step % cfg.LOG_FREQ == 0:
                 print(f'Logging step {global_step} (epoch {epoch_float:.2f}).')
 
                 # evaluation on sample of training and validation set
@@ -114,24 +114,17 @@ def run_training(cfg):
                 })
                 start = timeit.default_timer()
                 loss_set, sem_loss_set, change_loss_set = [], [], []
-
-            if cfg.DEBUG:
-                # testing evaluation
-                evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
-                break
             # end of batch
 
-        if not cfg.DEBUG:
-            assert (epoch == epoch_float)
+        assert (epoch == epoch_float)
         print(f'epoch float {epoch_float} (step {global_step}) - epoch {epoch}')
+        # evaluation at the end of an epoch
+        evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
+        evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
 
         if epoch in save_checkpoints and not cfg.DEBUG:
             print(f'saving network', flush=True)
             networks.save_checkpoint(net, optimizer, epoch, global_step, cfg)
-
-            # logs to load network
-            evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
-            evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
 
 
 if __name__ == '__main__':
@@ -148,13 +141,13 @@ if __name__ == '__main__':
 
     print('=== Runnning on device: p', device)
 
-    if not cfg.DEBUG:
-        wandb.init(
-            name=cfg.NAME,
-            config=cfg,
-            project='siamese_ssl',
-            tags=['ssl', 'cd', 'siamese', 'spacenet7', ],
-        )
+    wandb.init(
+        name=cfg.NAME,
+        config=cfg,
+        project='siamese_ssl',
+        tags=['ssl', 'cd', 'siamese', 'spacenet7', ],
+        mode='online' if not cfg.DEBUG else 'disabled',
+    )
 
     try:
         run_training(cfg)
