@@ -98,7 +98,7 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
                 for aoi_id, timestamps in metadata_test.items():
                     self.metadata[aoi_id] = timestamps
             if cfg.DATALOADER.INCLUDE_UNLABELED_VALIDATION:
-                aoi_ids_unlabelled += list(cfg.DATASET.TEST_VALIDATION)
+                aoi_ids_unlabelled += list(cfg.DATASET.VALIDATION_IDS)
             aoi_ids_unlabelled = sorted(aoi_ids_unlabelled)
             self.aoi_ids.extend(aoi_ids_unlabelled)
             self.labeled.extend([False] * len(aoi_ids_unlabelled))
@@ -108,7 +108,7 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
             self.labeled = self.labeled * cfg.DATALOADER.TRAINING_MULTIPLIER
 
         manager = multiprocessing.Manager()
-        self.test_ids = manager.list(list(self.cfg.DATASET.TEST_IDS))
+        self.unlabeled_ids = manager.list(list(self.cfg.DATASET.UNLABELED_IDS))
         self.aoi_ids = manager.list(self.aoi_ids)
         self.labeled = manager.list(self.labeled)
         self.metadata = manager.dict(self.metadata)
@@ -119,7 +119,7 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
         aoi_id = self.aoi_ids[index]
         labeled = self.labeled[index]
-        dataset = 'test' if aoi_id in self.test_ids else 'train'
+        dataset = 'test' if aoi_id in self.unlabeled_ids else 'train'
 
         timestamps = self.metadata[aoi_id]
         timestamps = [ts for ts in timestamps if not ts['mask']]
