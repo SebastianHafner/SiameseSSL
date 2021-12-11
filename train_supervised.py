@@ -105,6 +105,7 @@ def run_training(cfg):
         # evaluation at the end of an epoch
         evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step)
         evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step)
+        evaluation.model_evaluation(net, cfg, device, 'test', epoch_float, global_step)
 
         if epoch in save_checkpoints and not cfg.DEBUG:
             print(f'saving network', flush=True)

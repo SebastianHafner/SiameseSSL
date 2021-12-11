@@ -79,20 +79,26 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
         self.transform = augmentations.compose_transformations(cfg, no_augmentations)
 
         # loading labeled samples (sn7 train set) and subset to run type aoi ids
-        self.aoi_ids = list(cfg.DATASET.TRAINING_IDS) if run_type == 'training' else list(cfg.DATASET.VALIDATION_IDS)
+        if run_type == 'training':
+            self.aoi_ids = list(cfg.DATASET.TRAINING_IDS)
+        elif run_type == 'validation':
+            self.aoi_ids = list(cfg.DATASET.VALIDATION_IDS)
+        else:
+            self.aoi_ids = list(cfg.DATASET.TEST_IDS)
+
         self.labeled = [True] * len(self.aoi_ids)
         self.metadata = geofiles.load_json(self.root_path / f'metadata_train.json')
 
         # unlabeled data for semi-supervised learning
-        if (cfg.DATALOADER.INCLUDE_UNLABELED_VALIDATION or cfg.DATALOADER.INCLUDE_UNLABELED_TEST) and not disable_unlabeled:
+        if (cfg.DATALOADER.INCLUDE_UNLABELED or cfg.DATALOADER.INCLUDE_UNLABELED_VALIDATION) and not disable_unlabeled:
             aoi_ids_unlabelled = []
-            if cfg.DATALOADER.INCLUDE_UNLABELED_VALIDATION:
-                aoi_ids_unlabelled += list(cfg.DATASET.VALIDATION_IDS)
-            if cfg.DATALOADER.INCLUDE_UNLABELED_TEST:
-                aoi_ids_unlabelled += list(cfg.DATASET.TEST_IDS)
+            if cfg.DATALOADER.INCLUDE_UNLABELED:
+                aoi_ids_unlabelled += list(cfg.DATASET.UNLABELED_IDS)
                 metadata_test = geofiles.load_json(self.root_path / f'metadata_test.json')
                 for aoi_id, timestamps in metadata_test.items():
                     self.metadata[aoi_id] = timestamps
+            if cfg.DATALOADER.INCLUDE_UNLABELED_VALIDATION:
+                aoi_ids_unlabelled += list(cfg.DATASET.TEST_VALIDATION)
             aoi_ids_unlabelled = sorted(aoi_ids_unlabelled)
             self.aoi_ids.extend(aoi_ids_unlabelled)
             self.labeled.extend([False] * len(aoi_ids_unlabelled))

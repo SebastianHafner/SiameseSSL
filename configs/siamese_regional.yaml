@@ -1,5 +1,0 @@
-_BASE_: "regional_split.yaml"
-DEBUG: False
-
-MODEL:
-  TYPE: 'siameseunet'

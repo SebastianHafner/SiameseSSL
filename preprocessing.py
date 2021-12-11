@@ -106,6 +106,24 @@ def create_metadata_file(spacenet7_path: str, dataset: str):
     geofiles.write_json(file, metadata)
 
 
+def dataset_split(spacenet7_path: str, dataset: str, seed: int = 7):
+    aoi_ids = spacenet7_helpers.get_all_aoi_ids(spacenet7_path, dataset)
+    np.random.seed(seed)
+    rand_numbers = np.random.rand(len(aoi_ids))
+    splits = [[], [], []]
+    for aoi_id, rand_number in zip(aoi_ids, rand_numbers):
+        if rand_number < 0.6:
+            splits[0].append(aoi_id)
+        elif rand_number < 0.8:
+            splits[1].append(aoi_id)
+        else:
+            splits[2].append(aoi_id)
+    for split, aoi_ids in zip(['training', 'validation', 'test'], splits):
+        print(split)
+        for aoi_id in aoi_ids:
+            print(f"'{aoi_id}',")
+
+
 def metadata_argument_parser():
     # https://docs.python.org/3/library/argparse.html#the-add-argument-method
     parser = argparse.ArgumentParser(description="Experiment Args")
@@ -124,4 +142,5 @@ def metadata_argument_parser():
 
 if __name__ == '__main__':
     args = metadata_argument_parser().parse_known_args()[0]
-    create_metadata_file(args.spacenet7_dir, args.dataset)
+    # create_metadata_file(args.spacenet7_dir, args.dataset)
+    dataset_split(args.spacenet7_dir, args.dataset)
