@@ -100,7 +100,6 @@ def run_training(cfg):
                 # evaluation on sample of training and validation set
                 evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
                 evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
-                evaluation.model_evaluation(net, cfg, device, 'test', epoch_float, global_step, enable_sem=True)
 
                 # logging
                 time = timeit.default_timer() - start
@@ -122,6 +121,7 @@ def run_training(cfg):
         # evaluation at the end of an epoch
         evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
         evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
+        evaluation.model_evaluation(net, cfg, device, 'test', epoch_float, global_step, enable_sem=True)
 
         if epoch in save_checkpoints and not cfg.DEBUG:
             print(f'saving network', flush=True)
