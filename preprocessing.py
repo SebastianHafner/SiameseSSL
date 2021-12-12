@@ -106,7 +106,7 @@ def create_metadata_file(spacenet7_path: str, dataset: str):
     geofiles.write_json(file, metadata)
 
 
-def dataset_split(spacenet7_path: str, dataset: str, seed: int = 7):
+def dataset_split(spacenet7_path: str, dataset: str, seed: int = 42):
     aoi_ids = spacenet7_helpers.get_all_aoi_ids(spacenet7_path, dataset)
     np.random.seed(seed)
     rand_numbers = np.random.rand(len(aoi_ids))
