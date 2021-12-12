@@ -112,7 +112,7 @@ def dataset_split(spacenet7_path: str, dataset: str, seed: int = 7):
     rand_numbers = np.random.rand(len(aoi_ids))
     splits = [[], [], []]
     for aoi_id, rand_number in zip(aoi_ids, rand_numbers):
-        if rand_number < 0.6:
+        if rand_number < 0.5:
             splits[0].append(aoi_id)
         elif rand_number < 0.8:
             splits[1].append(aoi_id)
