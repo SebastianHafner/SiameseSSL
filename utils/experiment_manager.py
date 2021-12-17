@@ -86,6 +86,18 @@ def setup_cfg(args):
     return cfg
 
 
+def setup_cfg_manual(config_name: str, output_dir: Path, dataset_dir: Path):
+    cfg = new_config()
+    cfg.merge_from_file(f'configs/{config_name}.yaml')
+    cfg.NAME = config_name
+    cfg.PATHS.ROOT = str(Path.cwd())
+    assert output_dir.exists()
+    cfg.PATHS.OUTPUT = str(output_dir)
+    assert dataset_dir.exists()
+    cfg.PATHS.DATASET = str(dataset_dir)
+    return cfg
+
+
 # loading cfg
 def load_cfg(config_name: str):
     cfg = new_config()

@@ -170,6 +170,12 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
         return item
 
+    def get_index(self, aoi_id: str) -> int:
+        for index, candidate_aoi_id in enumerate(self.aoi_ids):
+            if aoi_id == candidate_aoi_id:
+                return index
+        return None
+
     def __len__(self):
         return self.length
 

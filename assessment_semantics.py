@@ -4,17 +4,17 @@ import numpy as np
 from tqdm import tqdm
 import argparse
 from pathlib import Path
-from utils import experiment_manager, networks, datasets
+from utils import experiment_manager, networks, datasets, metrics
 FONTSIZE = 16
 
 
-def qualitative_assessment_change(cfg: experiment_manager.CfgNode, run_type: str = 'validation'):
+def qualitative_assessment_change(cfg: experiment_manager.CfgNode, run_type: str = 'test'):
     net, *_ = networks.load_checkpoint(cfg.INFERENCE_CHECKPOINT, cfg, 'cpu')
     net.eval()
     ds = datasets.SpaceNet7CDDataset(cfg, run_type, dataset_mode='first_last', no_augmentations=True,
                                      disable_unlabeled=True, disable_multiplier=True)
 
-    for item in ds:
+    for item in tqdm(ds):
         aoi_id = item['aoi_id']
         x_t1 = item['x_t1']
         x_t2 = item['x_t2']
@@ -56,7 +56,7 @@ def qualitative_assessment_sem(cfg: experiment_manager.CfgNode, run_type: str = 
     ds = datasets.SpaceNet7CDDataset(cfg, run_type, dataset_mode='first_last', no_augmentations=True,
                                      disable_unlabeled=True, disable_multiplier=True)
 
-    for item in ds:
+    for item in tqdm(ds):
         aoi_id = item['aoi_id']
         x_t1 = item['x_t1']
         x_t2 = item['x_t2']
@@ -97,7 +97,59 @@ def qualitative_assessment_sem(cfg: experiment_manager.CfgNode, run_type: str = 
 
 
 def quantitative_assessment(cfg: experiment_manager.CfgNode, run_type: str = 'validation'):
-    pass
+    print(cfg.NAME)
+    net, *_ = networks.load_checkpoint(cfg.INFERENCE_CHECKPOINT, cfg, 'cpu')
+    net.eval()
+    ds = datasets.SpaceNet7CDDataset(cfg, run_type, dataset_mode='first_last', no_augmentations=True,
+                                     disable_unlabeled=True, disable_multiplier=True)
+
+    predictions_change = []
+    predictions_change_sem = []
+    predictions_sem = []
+    ground_truths_change = []
+    ground_truths_sem = []
+    for item in tqdm(ds):
+        ground_truths_sem.extend([item['y_sem_t1'].squeeze(), item['y_sem_t2'].squeeze()])
+        ground_truths_change.append(item['y_change'].squeeze())
+
+        logits_change, logits_sem_t1, logits_sem_t2 = net(item['x_t1'].unsqueeze(0), item['x_t2'].unsqueeze(0))
+
+        logits_change_sem = net.outc_sem_change(torch.cat((logits_sem_t1, logits_sem_t2), dim=1))
+        y_pred_change_sem = torch.sigmoid(logits_change_sem).squeeze().detach()
+        predictions_change_sem.append(y_pred_change_sem)
+
+        y_pred_change = torch.sigmoid(logits_change).squeeze().detach()
+        predictions_change.append(y_pred_change)
+        predictions_sem.extend([
+            torch.sigmoid(logits_sem_t1).squeeze().detach(),
+            torch.sigmoid(logits_sem_t2).squeeze().detach()
+        ])
+
+    predictions_change = np.concatenate(predictions_change).flatten()
+    predictions_change_sem = np.concatenate(predictions_change_sem).flatten()
+    ground_truths_change = np.concatenate(ground_truths_change).flatten()
+
+    ground_truths_change = ground_truths_change > 0.5
+    print('--Change--')
+    f1_score_change = metrics.f1_score_from_prob(predictions_change, ground_truths_change)
+    precision_change = metrics.precsision_from_prob(predictions_change, ground_truths_change)
+    recall_change = metrics.recall_from_prob(predictions_change, ground_truths_change)
+    print(f'F1 score: {f1_score_change:.3f} - Precision: {precision_change:.3f} - Recall {recall_change:.3f}')
+
+    print('--Change Sem--')
+    f1_score_change_sem = metrics.f1_score_from_prob(predictions_change_sem, ground_truths_change)
+    precision_change_sem = metrics.precsision_from_prob(predictions_change_sem, ground_truths_change)
+    recall_change_sem = metrics.recall_from_prob(predictions_change_sem, ground_truths_change)
+    print(f'F1 score: {f1_score_change_sem:.3f} - Precision: {precision_change_sem:.3f} - Recall {recall_change_sem:.3f}')
+
+    predictions_sem = np.concatenate(predictions_sem).flatten()
+    ground_truths_sem = np.concatenate(ground_truths_sem).flatten()
+
+    print('--Sem--')
+    f1_score_sem = metrics.f1_score_from_prob(predictions_sem, ground_truths_sem)
+    precision_sem = metrics.precsision_from_prob(predictions_sem, ground_truths_sem)
+    recall_sem = metrics.recall_from_prob(predictions_sem, ground_truths_sem)
+    print(f'F1 score: {f1_score_sem:.3f} - Precision: {precision_sem:.3f} - Recall {recall_sem:.3f}')
 
 
 def assessment_argument_parser():
@@ -122,5 +174,6 @@ def assessment_argument_parser():
 if __name__ == '__main__':
     args = assessment_argument_parser().parse_known_args()[0]
     cfg = experiment_manager.setup_cfg(args)
-    qualitative_assessment_change(cfg, run_type=args.run_type)
-    qualitative_assessment_sem(cfg, run_type=args.run_type)
+    quantitative_assessment(cfg, run_type=args.run_type)
+    # qualitative_assessment_change(cfg, run_type=args.run_type)
+    # qualitative_assessment_sem(cfg, run_type=args.run_type)
