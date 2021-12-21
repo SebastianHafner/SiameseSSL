@@ -39,7 +39,7 @@ class AbstractSpaceNet7Dataset(torch.utils.data.Dataset):
         folder = self.root_path / 'train' / aoi_id / 'labels_raster'
         file = folder / f'global_monthly_{year}_{month:02d}_mosaic_{aoi_id}_Buildings.tif'
         label, _, _ = geofiles.read_tif(file)
-        label = label / 255
+        label = label > 0
         return label.astype(np.float32)
 
     def _load_change_label(self, aoi_id: str, year_t1: int, month_t1: int, year_t2: int, month_t2) -> np.ndarray:

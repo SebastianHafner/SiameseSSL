@@ -153,9 +153,8 @@ def is_fully_masked(dataset: str, aoi_id: str, year: int, month: int) -> bool:
     return False
 
 
-def load_label(aoi_id: str, year: int, month: int) -> np.ndarray:
-    dirs = paths.load_paths()
-    buildings_path = Path(dirs.DATASET) / aoi_id / 'buildings'
+def load_label(dataset_dir: str, aoi_id: str, year: int, month: int) -> np.ndarray:
+    buildings_path = Path(dataset_dir) / aoi_id / 'buildings'
     label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
     label, _, _ = geofiles.read_tif(label_file)
     label = np.squeeze(label > 0).astype(np.float)
@@ -169,15 +168,6 @@ def load_label_in_timeseries(aoi_id: str, index: int) -> np.ndarray:
     year, month, *_ = dates[index]
     label = load_label(aoi_id, year, month)
     return label
-
-
-def load_label_timeseries(aoi_id: str) -> np.ndarray:
-    dates = get_timeseries(aoi_id)
-    label_cube = np.zeros((*get_yx_size(aoi_id), len(dates)), dtype=np.float)
-    for i, (year, month, *_) in enumerate(dates):
-        label = load_label(aoi_id, year, month)
-        label_cube[:, :, i] = label
-    return label_cube
 
 
 def generate_change_label(aoi_id: str) -> np.ndarray:
