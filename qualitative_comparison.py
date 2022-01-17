@@ -103,7 +103,7 @@ def qualitative_comparison_zoom_selector(output_dir: str, dataset_dir: str, aoi_
 
 
 def qualitative_comparison_zoom(config_names: list, output_dir: str, dataset_dir: str, aoi_ids: list, zooms: list,
-                                color_misclassifications: bool = False):
+                                colored: bool = False):
     plot_size = 3
     rows = len(aoi_ids)
     cols = 3 + len(config_names)
@@ -139,7 +139,7 @@ def qualitative_comparison_zoom(config_names: list, output_dir: str, dataset_dir
 
             gt_change = spacenet7_helpers.load_change_label_indices(dataset_dir, aoi_id, 0, -1)
             gt_change = gt_change[i_start:i_end, j_start:j_end]
-            if color_misclassifications:
+            if colored:
                 classification = get_misclassifications(y_pred_change, gt_change)
                 colors = [(0, 0, 0), (1, 1, 1), (142 / 255, 1, 0), (140 / 255, 25 / 255, 140 / 255)]
                 cmap = mpl.colors.ListedColormap(colors)
@@ -155,13 +155,13 @@ def qualitative_comparison_zoom(config_names: list, output_dir: str, dataset_dir
                     axs[i, 0 if index == 0 else 1].imshow(img)
                     axs[i, 2].imshow(gt_change, cmap='gray')
 
-
     for c in range(cols):
         char = chr(97 + c)
         axs[-1, c].set_xlabel(f'({char})', fontsize=FONTSIZE, fontweight='bold')
         axs[-1, c].xaxis.set_label_coords(0.5, -0.025)
 
-    out_file = Path(output_dir) / 'plots' / f'qualitative_comparison_zoom.png'
+    suffix = 'zoom' if not colored else 'zoom_colored'
+    out_file = Path(output_dir) / 'plots' / f'qualitative_comparison_{suffix}.png'
     plt.savefig(out_file, dpi=300, bbox_inches='tight')
     plt.show()
     plt.close(fig)
@@ -216,9 +216,19 @@ if __name__ == '__main__':
         (0, 150, 750),
     ]
 
+    aoi_ids = [
+        'L15-0457E-1135N_1831_3648_13',
+        'L15-1479E-1101N_5916_3785_13',
+        'L15-1672E-1207N_6691_3363_13',
+    ]
+    zooms = [
+        (400, 100, 200),
+        (0, 0, 300),
+        (0, 150, 750),
+    ]
+
     # qualitative_comparison(args.config_files, args.output_dir, args.dataset_dir, aoi_ids)
     # qualitative_comparison_zoom_selector(args.output_dir, args.dataset_dir, aoi_ids, zooms)
-    qualitative_comparison_zoom(args.config_files, args.output_dir, args.dataset_dir, aoi_ids, zooms,
-                                color_misclassifications=True)
+    qualitative_comparison_zoom(args.config_files, args.output_dir, args.dataset_dir, aoi_ids, zooms, colored=True)
     # qualitative_assessment_change(cfg, run_type=args.run_type)
     # qualitative_assessment_sem(cfg, run_type=args.run_type)
