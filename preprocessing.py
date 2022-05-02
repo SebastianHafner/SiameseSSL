@@ -87,7 +87,7 @@ def create_metadata_file(spacenet7_path: str, dataset: str):
     for aoi_id in spacenet7_helpers.get_all_aoi_ids(spacenet7_path, dataset):
         # container for all the timestamps (each image results in a timestamp)
         timestamps = []
-        all_dates_sorted = spacenet7_helpers.get_all_dates(spacenet7_path, dataset, aoi_id, sort_by_date=True)
+        all_dates_sorted = spacenet7_helpers.get_all_dates(spacenet7_path, aoi_id, sort_by_date=True)
         for i, date in enumerate(all_dates_sorted):
             year, month = date
             timestamp = {
@@ -95,7 +95,7 @@ def create_metadata_file(spacenet7_path: str, dataset: str):
                 'index': i,
                 'year': year,
                 'month': month,
-                'mask': spacenet7_helpers.is_masked(spacenet7_path, dataset, aoi_id, year, month),
+                'mask': spacenet7_helpers.is_masked(spacenet7_path, aoi_id, year, month),
                 'label': True if dataset == 'train' else False,
             }
             timestamps.append(timestamp)
@@ -142,5 +142,5 @@ def metadata_argument_parser():
 
 if __name__ == '__main__':
     args = metadata_argument_parser().parse_known_args()[0]
-    # create_metadata_file(args.spacenet7_dir, args.dataset)
-    dataset_split(args.spacenet7_dir, args.dataset)
+    create_metadata_file(args.spacenet7_dir, args.dataset)
+    # dataset_split(args.spacenet7_dir, args.dataset)
