@@ -6,7 +6,7 @@ In this study, a Semi-Supervised Learning (SSL) method for improving urban chang
 # The Proposed Method
 
 The architecture of the proposed network is shown below.
-![](figures/architecture.PNG)
+![](figures/architecture.png)
 
 
 
