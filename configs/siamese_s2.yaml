@@ -1,0 +1,10 @@
+_BASE_: "base.yaml"
+DEBUG: False
+GROUP: 'siamese_s2'
+
+MODEL:
+  TYPE: 'siameseunet'
+  IN_CHANNELS: 4
+
+DATALOADER:
+  SENSOR: 'sentinel2'

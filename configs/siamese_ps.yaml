@@ -1,0 +1,6 @@
+_BASE_: "base.yaml"
+DEBUG: False
+GROUP: 'siamese_ps'
+
+MODEL:
+  TYPE: 'siameseunet'

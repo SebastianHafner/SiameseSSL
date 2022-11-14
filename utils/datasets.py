@@ -88,7 +88,8 @@ class AbstractSpaceNet7Dataset(torch.utils.data.Dataset):
 class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
     def __init__(self, cfg: experiment_manager.CfgNode, run_type: str, no_augmentations: bool = False,
-                 dataset_mode: str = None, disable_multiplier: bool = False, disable_unlabeled: bool = False):
+                 dataset_mode: str = None, disable_multiplier: bool = False, disable_unlabeled: bool = False,
+                 only_unlabeled: bool = False):
         super().__init__(cfg, run_type)
 
         self.dataset_mode = cfg.DATALOADER.MODE if dataset_mode is None else dataset_mode
@@ -98,19 +99,22 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
         self.no_augmentations = no_augmentations
         self.transform = augmentations.compose_transformations(cfg, no_augmentations)
 
-        # loading labeled samples (sn7 train set) and subset to run type aoi ids
-        if run_type == 'training':
-            self.aoi_ids = list(cfg.DATASET.TRAIN_IDS)
-        elif run_type == 'validation':
-            self.aoi_ids = list(cfg.DATASET.VALIDATION_IDS)
-        else:
-            self.aoi_ids = list(cfg.DATASET.TEST_IDS)
-
-        self.labeled = [True] * len(self.aoi_ids)
         self.metadata = geofiles.load_json(self.root_path / f'metadata_siamesessl.json')
 
+        # loading labeled samples (sn7 train set) and subset to run type aoi ids
+        if not only_unlabeled:
+            if run_type == 'training':
+                self.aoi_ids = list(cfg.DATASET.TRAIN_IDS)
+            elif run_type == 'validation':
+                self.aoi_ids = list(cfg.DATASET.VALIDATION_IDS)
+            else:
+                self.aoi_ids = list(cfg.DATASET.TEST_IDS)
+        else:
+            self.aoi_ids = []
+        self.labeled = [True] * len(self.aoi_ids)
+
         # unlabeled data for semi-supervised learning
-        if cfg.DATALOADER.INCLUDE_UNLABELED and not disable_unlabeled:
+        if (cfg.DATALOADER.INCLUDE_UNLABELED and not disable_unlabeled) or only_unlabeled:
             aoi_ids_unlabelled = list(cfg.DATASET.UNLABELED_IDS)
             if cfg.DATALOADER.INCLUDE_UNLABELED_VALIDATION:
                 aoi_ids_unlabelled += list(cfg.DATASET.VALIDATION_IDS)

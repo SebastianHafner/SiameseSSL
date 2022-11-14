@@ -1,0 +1,3 @@
+_BASE_: "siamese_s2.yaml"
+SEED: 3
+DEBUG: False

@@ -13,10 +13,6 @@ import numpy as np
 from utils import networks, datasets, loss_functions, evaluation, experiment_manager
 
 
-def concatenate_batches(batch1, batch2, dict_key: str):
-    return torch.cat((batch1[dict_key], batch2[dict_key]), dim=0)
-
-
 def run_training(cfg):
     run_config = {
         'CONFIG_NAME': cfg.NAME,
@@ -39,32 +35,22 @@ def run_training(cfg):
     change_consistency_criterion = loss_functions.get_criterion(cfg.CONSISTENCY_TRAINER.LOSS_TYPE)
 
     # reset the generators
-    dataset_labeled = datasets.SpaceNet7CDDataset(cfg=cfg, run_type='training', disable_unlabeled=True)
-    dataset_unlabeled = datasets.SpaceNet7CDDataset(cfg=cfg, run_type='training', only_unlabeled=True)
-
-    total_samples = len(dataset_labeled) + len(dataset_unlabeled)
-    fraction_labeled = len(dataset_labeled) / total_samples
-    fraction_unlabeled = len(dataset_unlabeled) / total_samples
-    batch_size_labeled = int(np.rint(cfg.TRAINER.BATCH_SIZE * fraction_labeled))
-    batch_size_unlabeled = int(np.rint(cfg.TRAINER.BATCH_SIZE * fraction_unlabeled))
-    assert(batch_size_labeled + batch_size_unlabeled == cfg.TRAINER.BATCH_SIZE)
+    dataset = datasets.SpaceNet7CDDataset(cfg=cfg, run_type='training')
+    print(dataset)
 
     dataloader_kwargs = {
+        'batch_size': cfg.TRAINER.BATCH_SIZE,
         'num_workers': 0 if cfg.DEBUG else cfg.DATALOADER.NUM_WORKER,
         'shuffle': cfg.DATALOADER.SHUFFLE,
         'drop_last': True,
         'pin_memory': True,
     }
-
-    dataloader_labeled = torch_data.DataLoader(dataset_labeled, batch_size=batch_size_labeled, **dataloader_kwargs)
-    dataloader_unlabeled = torch_data.DataLoader(dataset_unlabeled, batch_size=batch_size_unlabeled,
-                                                 **dataloader_kwargs)
+    dataloader = torch_data.DataLoader(dataset, **dataloader_kwargs)
 
     # unpacking cfg
     epochs = cfg.TRAINER.EPOCHS
     save_checkpoints = cfg.SAVE_CHECKPOINTS
-    steps_per_epoch = len(dataloader_labeled) if len(dataloader_labeled) < len(dataloader_unlabeled) else \
-        len(dataloader_unlabeled)
+    steps_per_epoch = len(dataloader)
 
     # tracking variables
     global_step = epoch_float = 0
@@ -76,16 +62,13 @@ def run_training(cfg):
         loss_set, sem_loss_set, change_loss_set, change_sem_loss_set, consistency_loss_set = [], [], [], [], []
         n_labeled, n_notlabeled = 0, 0
 
-        for i, (batch_labeled, batch_unlabeled) in enumerate(zip(dataloader_labeled, dataloader_unlabeled)):
-
-            if i == steps_per_epoch:
-                break
+        for i, batch in enumerate(dataloader):
 
             net.train()
             optimizer.zero_grad()
 
-            x_t1 = concatenate_batches(batch_labeled, batch_unlabeled, 'x_t1').to(device)
-            x_t2 = concatenate_batches(batch_labeled, batch_unlabeled, 'x_t2').to(device)
+            x_t1 = batch['x_t1'].to(device)
+            x_t2 = batch['x_t2'].to(device)
 
             logits_change, logits_sem_t1, logits_sem_t2 = net(x_t1, x_t2)
             logits_change_sem = net.outc_sem_change(torch.cat((logits_sem_t1, logits_sem_t2), dim=1))
@@ -93,16 +76,16 @@ def run_training(cfg):
 
             supervised_loss, consistency_loss = None, None
 
-            is_labeled = concatenate_batches(batch_labeled, batch_unlabeled, 'is_labeled')
+            is_labeled = batch['is_labeled']
             n_labeled += torch.sum(is_labeled).item()
             if is_labeled.any():
                 # change detection
-                gt_change = concatenate_batches(batch_labeled, batch_unlabeled, 'y_change').to(device)
+                gt_change = batch['y_change'].to(device)
                 change_loss = change_criterion(logits_change[is_labeled,], gt_change[is_labeled,])
 
                 # semantic segmentation
-                gt_sem_t1 = concatenate_batches(batch_labeled, batch_unlabeled, 'y_sem_t1').to(device)
-                gt_sem_t2 = concatenate_batches(batch_labeled, batch_unlabeled, 'y_sem_t2').to(device)
+                gt_sem_t1 = batch['y_sem_t1'].to(device)
+                gt_sem_t2 = batch['y_sem_t2'].to(device)
 
                 sem_t1_loss = sem_criterion(logits_sem_t1[is_labeled,], gt_sem_t1[is_labeled,])
                 sem_t2_loss = sem_criterion(logits_sem_t2[is_labeled,], gt_sem_t2[is_labeled,])
