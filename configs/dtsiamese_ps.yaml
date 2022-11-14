@@ -1,0 +1,8 @@
+_BASE_: "base.yaml"
+DEBUG: False
+
+MODEL:
+  TYPE: 'dtsiameseunet'
+
+DATALOADER:
+  INCLUDE_BUILDING_LABELS: True

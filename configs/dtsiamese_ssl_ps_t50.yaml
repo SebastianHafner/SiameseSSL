@@ -1,4 +1,4 @@
-_BASE_: "base.yaml"
+_BASE_: "base_t50.yaml"
 DEBUG: False
 
 MODEL:

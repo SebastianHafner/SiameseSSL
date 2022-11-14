@@ -15,7 +15,13 @@ class AbstractSpaceNet7Dataset(torch.utils.data.Dataset):
         self.root_path = Path(cfg.PATHS.DATASET)
 
         self.include_alpha = cfg.DATALOADER.INCLUDE_ALPHA
-        self.img_bands = 3 if not self.include_alpha else 4
+        if cfg.DATALOADER.SENSOR == 'planetscope':
+            self.img_bands = 3 if not self.include_alpha else 4
+        else:
+            self.img_bands = len(cfg.DATALOADER.SENTINEL2_BANDS)
+
+        # creating boolean feature vector to subset sentinel 2 bands
+        self.s2_indices = [['B2', 'B3', 'B4', 'B8'].index(band) for band in cfg.DATALOADER.SENTINEL2_BANDS]
 
     @abstractmethod
     def __getitem__(self, index: int) -> dict:
@@ -25,7 +31,7 @@ class AbstractSpaceNet7Dataset(torch.utils.data.Dataset):
     def __len__(self) -> int:
         pass
 
-    def _load_mosaic(self, aoi_id: str, dataset: str, year: int, month: int) -> np.ndarray:
+    def _load_planetscope_mosaic(self, aoi_id: str, dataset: str, year: int, month: int) -> np.ndarray:
         folder = self.root_path / dataset / aoi_id / 'images_masked'
         file = folder / f'global_monthly_{year}_{month:02d}_mosaic_{aoi_id}.tif'
         img, _, _ = geofiles.read_tif(file)
@@ -34,6 +40,20 @@ class AbstractSpaceNet7Dataset(torch.utils.data.Dataset):
         if not self.include_alpha:
             img = img[:, :, :-1]
         return img.astype(np.float32)
+
+    def _load_sentinel2_scene(self, aoi_id: str, dataset: str, year: int, month: int) -> np.ndarray:
+        folder = self.root_path / dataset / aoi_id / 'sentinel2'
+        file = folder / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
+        img, *_ = geofiles.read_tif(file)
+        img = img[:, :, self.s2_indices]
+        return img.astype(np.float32)
+
+    def _load_satellite_image(self, aoi_id: str, dataset: str, year: int, month: int) -> np.ndarray:
+        if self.cfg.DATALOADER.SENSOR == 'planetscope':
+            img = self._load_planetscope_mosaic(aoi_id, dataset, year, month)
+        else:
+            img = self._load_sentinel2_scene(aoi_id, dataset, year, month)
+        return img
 
     def _load_building_label(self, aoi_id: str, year: int, month: int) -> np.ndarray:
         folder = self.root_path / 'train' / aoi_id / 'labels_raster'
@@ -80,23 +100,18 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
         # loading labeled samples (sn7 train set) and subset to run type aoi ids
         if run_type == 'training':
-            self.aoi_ids = list(cfg.DATASET.TRAINING_IDS)
+            self.aoi_ids = list(cfg.DATASET.TRAIN_IDS)
         elif run_type == 'validation':
             self.aoi_ids = list(cfg.DATASET.VALIDATION_IDS)
         else:
             self.aoi_ids = list(cfg.DATASET.TEST_IDS)
 
         self.labeled = [True] * len(self.aoi_ids)
-        self.metadata = geofiles.load_json(self.root_path / f'metadata_train.json')
+        self.metadata = geofiles.load_json(self.root_path / f'metadata_siamesessl.json')
 
         # unlabeled data for semi-supervised learning
-        if (cfg.DATALOADER.INCLUDE_UNLABELED or cfg.DATALOADER.INCLUDE_UNLABELED_VALIDATION) and not disable_unlabeled:
-            aoi_ids_unlabelled = []
-            if cfg.DATALOADER.INCLUDE_UNLABELED:
-                aoi_ids_unlabelled += list(cfg.DATASET.UNLABELED_IDS)
-                metadata_test = geofiles.load_json(self.root_path / f'metadata_test.json')
-                for aoi_id, timestamps in metadata_test.items():
-                    self.metadata[aoi_id] = timestamps
+        if cfg.DATALOADER.INCLUDE_UNLABELED and not disable_unlabeled:
+            aoi_ids_unlabelled = list(cfg.DATASET.UNLABELED_IDS)
             if cfg.DATALOADER.INCLUDE_UNLABELED_VALIDATION:
                 aoi_ids_unlabelled += list(cfg.DATASET.VALIDATION_IDS)
             aoi_ids_unlabelled = sorted(aoi_ids_unlabelled)
@@ -119,21 +134,24 @@ class SpaceNet7CDDataset(AbstractSpaceNet7Dataset):
 
         aoi_id = self.aoi_ids[index]
         labeled = self.labeled[index]
-        dataset = 'test' if aoi_id in self.unlabeled_ids else 'train'
 
         timestamps = self.metadata[aoi_id]
-        timestamps = [ts for ts in timestamps if not ts['mask']]
+        if self.cfg.DATALOADER.SENSOR == 'sentinel2' or self.cfg.DATALOADER.CONSISTENT_TIMESTAMPS:
+            timestamps = [ts for ts in timestamps if not ts['mask'] and ts['sentinel2']]
+        else:
+            timestamps = [ts for ts in timestamps if not ts['mask']]
 
         if self.dataset_mode == 'first_last':
-            indices = [0, -1]
+            i_t1, i_t2 = 0, -1
         else:
-            indices = sorted(np.random.randint(0, len(timestamps), size=2))
+            i_t1, i_t2 = sorted(np.random.randint(0, len(timestamps), size=2))
+        ts_t1, ts_t2 = timestamps[i_t1], timestamps[i_t2]
 
-        year_t1, month_t1 = timestamps[indices[0]]['year'], timestamps[indices[0]]['month']
-        year_t2, month_t2 = timestamps[indices[1]]['year'], timestamps[indices[1]]['month']
+        dataset, year_t1, month_t1 = ts_t1['dataset'], ts_t1['year'], ts_t1['month']
+        dataset, year_t2, month_t2 = ts_t2['dataset'], ts_t2['year'], ts_t2['month']
 
-        img_t1 = self._load_mosaic(aoi_id, dataset, year_t1, month_t1)
-        img_t2 = self._load_mosaic(aoi_id, dataset, year_t2, month_t2)
+        img_t1 = self._load_satellite_image(aoi_id, dataset, year_t1, month_t1)
+        img_t2 = self._load_satellite_image(aoi_id, dataset, year_t2, month_t2)
         imgs = np.concatenate((img_t1, img_t2), axis=-1)
 
         if labeled:
