@@ -146,6 +146,7 @@ if __name__ == '__main__':
         name=cfg.NAME,
         config=cfg,
         project='siamese_ssl',
+        entity='spacenet7',
         tags=['ssl', 'cd', 'siamese', 'spacenet7', ],
         mode='online' if not cfg.DEBUG else 'disabled',
     )
