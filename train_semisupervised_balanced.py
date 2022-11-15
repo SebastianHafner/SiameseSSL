@@ -88,7 +88,10 @@ def run_training(cfg):
             x_t2 = concatenate_batches(batch_labeled, batch_unlabeled, 'x_t2').to(device)
 
             logits_change, logits_sem_t1, logits_sem_t2 = net(x_t1, x_t2)
-            logits_change_sem = net.outc_sem_change(torch.cat((logits_sem_t1, logits_sem_t2), dim=1))
+            if cfg.MODEL.ENABLE_SEMANTIC_CHANGE_OUTCONV:
+                logits_change_sem = net.outc_sem_change(torch.cat((logits_sem_t1, logits_sem_t2), dim=1))
+            else:
+                logits_change_sem = torch.sub(logits_sem_t2, logits_sem_t1)
             y_pred_change_sem = torch.sigmoid(logits_change_sem)
 
             supervised_loss, consistency_loss = None, None
