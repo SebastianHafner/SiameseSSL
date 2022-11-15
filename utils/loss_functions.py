@@ -138,8 +138,8 @@ def dice_like_loss(input: torch.Tensor, target: torch.Tensor):
     return 1 - ((2. * intersection) / denom)
 
 
-def power_jaccard_loss(input: torch.Tensor, target: torch.Tensor):
-    input_sigmoid = torch.sigmoid(input)
+def power_jaccard_loss(input: torch.Tensor, target: torch.Tensor, disable_sigmoid: bool = False):
+    input_sigmoid = torch.sigmoid(input) if not disable_sigmoid else input
     eps = 1e-6
 
     iflat = input_sigmoid.flatten()
