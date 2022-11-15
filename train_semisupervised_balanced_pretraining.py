@@ -104,17 +104,12 @@ def run_training(cfg):
 
             loss = (change_loss + sem_loss) / 2
 
-            loss.backward()
-            optimizer.step()
-
             sem_loss_set.append(sem_loss.item())
             change_loss_set.append(change_loss.item())
             loss_set.append(loss.item())
 
             loss.backward()
             optimizer.step()
-
-            loss_set.append(loss.item())
 
             global_step += 1
             epoch_float = global_step / steps_per_epoch
