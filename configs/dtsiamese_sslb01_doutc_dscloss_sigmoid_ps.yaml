@@ -1,5 +1,6 @@
 _BASE_: "base.yaml"
 DEBUG: False
+GROUP: 'dtsiamese_sslb01_doutc_dscloss_sigmoid_ps'
 
 MODEL:
   TYPE: 'dtsiameseunet'
