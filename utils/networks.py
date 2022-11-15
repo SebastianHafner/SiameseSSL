@@ -11,13 +11,14 @@ from utils import experiment_manager
 
 def create_network(cfg):
     if cfg.MODEL.TYPE == 'unet':
-        return UNet(cfg)
+        net = UNet(cfg)
     elif cfg.MODEL.TYPE == 'siameseunet':
-        return SiameseUNet(cfg)
+        net = SiameseUNet(cfg)
     elif cfg.MODEL.TYPE == 'dtsiameseunet':
-        return DualTaskSiameseUNet(cfg)
+        net = DualTaskSiameseUNet(cfg)
     else:
         raise Exception(f'Unknown network ({cfg.MODEL.TYPE}).')
+    return nn.DataParallel(net)
 
 
 def save_checkpoint(network, optimizer, epoch, step, cfg: experiment_manager.CfgNode):
