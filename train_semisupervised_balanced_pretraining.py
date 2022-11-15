@@ -138,7 +138,7 @@ def run_training(cfg):
                 loss_set, sem_loss_set, change_loss_set= [], [], []
             # end of batch
 
-        assert (epoch == epoch_float)
+        # assert (epoch == epoch_float)
         print(f'epoch float {epoch_float} (step {global_step}) - epoch {epoch}')
         # evaluation at the end of an epoch
         evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
@@ -251,7 +251,7 @@ def run_training(cfg):
                 loss_set, sem_loss_set, change_loss_set, change_sem_loss_set, consistency_loss_set = [], [], [], [], []
             # end of batch
 
-        assert (epoch == epoch_float)
+        # assert (epoch == epoch_float)
         print(f'epoch float {epoch_float} (step {global_step}) - epoch {epoch}')
         # evaluation at the end of an epoch
         evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
