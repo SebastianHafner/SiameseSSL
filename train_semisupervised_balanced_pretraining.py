@@ -70,7 +70,7 @@ def run_training(cfg):
     # tracking variables
     global_step = epoch_float = 0
 
-    epochs_pretraining = 1
+    epochs_pretraining = cfg.CONSISTENCY_TRAINER.EPOCHS_PRETRAINING
 
     for epoch in range(1, epochs_pretraining + 1):
         print(f'Starting epoch {epoch}/{epochs} (pretraining).')
