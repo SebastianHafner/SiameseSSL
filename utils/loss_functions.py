@@ -114,8 +114,8 @@ def jaccard_like_loss_multi_class(input: torch.Tensor, y: torch.Tensor):
     return loss
 
 
-def jaccard_like_loss(input: torch.Tensor, target: torch.Tensor):
-    input_sigmoid = torch.sigmoid(input)
+def jaccard_like_loss(input: torch.Tensor, target: torch.Tensor, disable_sigmoid: bool = False):
+    input_sigmoid = torch.sigmoid(input) if not disable_sigmoid else input
     eps = 1e-6
 
     iflat = input_sigmoid.flatten()
