@@ -55,7 +55,7 @@ def run_training(cfg):
         'pin_memory': True,
     }
 
-    dataloader_pretraining = torch_data.DataLoader(dataset_labeled, batch_size=batch_SIZE,
+    dataloader_pretraining = torch_data.DataLoader(dataset_labeled, batch_size=batch_size,
                                                    **dataloader_kwargs)
     dataloader_labeled = torch_data.DataLoader(dataset_labeled, batch_size=batch_size_labeled, **dataloader_kwargs)
     dataloader_unlabeled = torch_data.DataLoader(dataset_unlabeled, batch_size=batch_size_unlabeled,
@@ -170,7 +170,7 @@ def run_training(cfg):
 
             logits_change, logits_sem_t1, logits_sem_t2 = net(x_t1, x_t2)
             if cfg.MODEL.ENABLE_SEMANTIC_CHANGE_OUTCONV:
-                logits_change_sem = net.outc_sem_change(torch.cat((logits_sem_t1, logits_sem_t2), dim=1))
+                logits_change_sem = net.module.outc_sem_change(torch.cat((logits_sem_t1, logits_sem_t2), dim=1))
             else:
                 logits_change_sem = torch.sub(logits_sem_t2, logits_sem_t1)
             y_pred_change_sem = torch.sigmoid(logits_change_sem)
