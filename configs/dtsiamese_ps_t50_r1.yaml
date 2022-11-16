@@ -1,0 +1,3 @@
+_BASE_: "dtsiamese_ps_t50.yaml"
+SEED: 1
+DEBUG: False

@@ -1,0 +1,3 @@
+_BASE_: "dtsiamese_benchmark_t50.yaml"
+SEED: 2
+DEBUG: False

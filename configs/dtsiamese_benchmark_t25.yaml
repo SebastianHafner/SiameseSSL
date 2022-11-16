@@ -1,0 +1,16 @@
+_BASE_: "base_t25.yaml"
+DEBUG: False
+GROUP: 'dtsiamese_benchmark_t25'
+
+MODEL:
+  TYPE: 'dtsiameseunet'
+  ENABLE_SEMANTIC_CHANGE_LOSS: False
+  ENABLE_SEMANTIC_CHANGE_OUTCONV: False
+
+DATALOADER:
+  INCLUDE_BUILDING_LABELS: True
+  INCLUDE_UNLABELED: True
+
+CONSISTENCY_TRAINER:
+  LOSS_FACTOR: 0.1
+  LOSS_TYPE: 'PowerJaccardLoss'

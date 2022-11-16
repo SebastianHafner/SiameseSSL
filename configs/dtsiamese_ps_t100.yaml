@@ -1,6 +1,6 @@
-_BASE_: "base_t50.yaml"
+_BASE_: "base_t100.yaml"
 DEBUG: False
-GROUP: 'dtsiamese_ps_t50'
+GROUP: 'dtsiamese_ps_t100'
 
 MODEL:
   TYPE: 'dtsiameseunet'
