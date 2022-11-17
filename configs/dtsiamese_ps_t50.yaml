@@ -1,6 +1,8 @@
 _BASE_: "base_t50.yaml"
 DEBUG: False
-GROUP: 'dtsiamese_ps_t50'
+
+LOGGING:
+  GROUP: 'dtsiamese_ps_t50'
 
 MODEL:
   TYPE: 'dtsiameseunet'

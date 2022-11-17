@@ -1,6 +1,8 @@
 _BASE_: "base.yaml"
 DEBUG: False
-GROUP: 'dtsiamese_s2'
+
+LOGGING:
+  GROUP: 'dtsiamese_s2'
 
 MODEL:
   TYPE: 'dtsiameseunet'

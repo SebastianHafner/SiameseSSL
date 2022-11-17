@@ -76,3 +76,24 @@ def model_evaluation(net, cfg, device, run_type: str, epoch: float, step: int, e
                    })
 
     return f1_change
+
+
+def model_evaluation_earlystopping(net, cfg, device, run_type: str, enable_sem: bool = False) -> float:
+    ds = datasets.SpaceNet7CDDataset(cfg, run_type, no_augmentations=True, dataset_mode='first_last',
+                                     disable_multiplier=True, disable_unlabeled=True)
+
+    data = inference_loop(net, ds, device, enable_sem)
+
+    f1_change, precision_change, recall_change = data['change']
+    wandb.log({f'earlystopping {run_type} change F1': f1_change,
+               f'earlystopping {run_type} change precision': precision_change,
+               f'earlystopping {run_type} change recall': recall_change,
+               })
+
+    if enable_sem:
+        f1_sem, precision_sem, recall_sem = data['semantics']
+        wandb.log({f'earlystopping {run_type} sem F1': f1_sem,
+                   f'earlystopping {run_type} sem precision': precision_sem,
+                   f'earlystopping {run_type} sem recall': recall_sem,
+                   })
+

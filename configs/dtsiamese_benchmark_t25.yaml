@@ -1,6 +1,8 @@
 _BASE_: "base_t25.yaml"
 DEBUG: False
-GROUP: 'dtsiamese_benchmark_t25'
+
+LOGGING:
+  GROUP: 'dtsiamese_benchmark_t25'
 
 MODEL:
   TYPE: 'dtsiameseunet'

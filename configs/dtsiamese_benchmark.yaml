@@ -1,8 +1,8 @@
-_BASE_: "base_t50.yaml"
+_BASE_: "base.yaml"
 DEBUG: False
 
 LOGGING:
-  GROUP: 'dtsiamese_benchmark_cons05_t50'
+  GROUP: 'benchmark'
 
 MODEL:
   TYPE: 'dtsiameseunet'
@@ -14,5 +14,5 @@ DATALOADER:
   INCLUDE_UNLABELED: True
 
 CONSISTENCY_TRAINER:
-  LOSS_FACTOR: 0.5
+  LOSS_FACTOR: 0.1
   LOSS_TYPE: 'PowerJaccardLoss'

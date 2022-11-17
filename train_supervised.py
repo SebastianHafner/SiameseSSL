@@ -129,6 +129,13 @@ def run_training(cfg):
         if stop_training:
             break  # end of training by early stopping
 
+    # final logging for early stopping
+    if cfg.EARLY_STOPPING.ENABLE:
+        net, *_ = networks.load_checkpoint(cfg.INFERENCE_CHECKPOINT, cfg, device, best_val=True)
+        evaluation.model_evaluation_earlystopping(net, cfg, device, 'training')
+        evaluation.model_evaluation_earlystopping(net, cfg, device, 'validation')
+        evaluation.model_evaluation_earlystopping(net, cfg, device, 'test')
+
 
 if __name__ == '__main__':
     args = experiment_manager.default_argument_parser().parse_known_args()[0]
