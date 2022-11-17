@@ -131,7 +131,7 @@ def run_training(cfg):
         if cfg.EARLY_STOPPING.ENABLE:
             if f1_change_val <= best_f1_change_val:
                 trigger_times += 1
-                if trigger_times > cfg.SAVE.PATIENCE:
+                if trigger_times > cfg.EARLY_STOPPING.PATIENCE:
                     stop_training = True
             else:
                 best_f1_change_val = f1_change_val
