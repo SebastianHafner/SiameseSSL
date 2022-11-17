@@ -62,7 +62,6 @@ def run_training(cfg):
 
     # unpacking cfg
     epochs = cfg.TRAINER.EPOCHS
-    save_checkpoints = cfg.SAVE_CHECKPOINTS
     steps_per_epoch = len(dataloader_labeled) if len(dataloader_labeled) < len(dataloader_unlabeled) else \
         len(dataloader_unlabeled)
 
