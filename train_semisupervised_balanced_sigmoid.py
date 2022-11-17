@@ -69,6 +69,11 @@ def run_training(cfg):
     # tracking variables
     global_step = epoch_float = 0
 
+    # early stopping
+    best_f1_change_val = 0
+    trigger_times = 0
+    stop_training = False
+
     for epoch in range(1, epochs + 1):
         print(f'Starting epoch {epoch}/{epochs}.')
 
@@ -151,12 +156,12 @@ def run_training(cfg):
             global_step += 1
             epoch_float = global_step / steps_per_epoch
 
-            if global_step % cfg.LOG_FREQ == 0:
+            if global_step % cfg.LOGGING.FREQUENCY == 0:
                 print(f'Logging step {global_step} (epoch {epoch_float:.2f}).')
 
                 # evaluation on sample of training and validation set
-                evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
-                evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
+                _ = evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
+                _ = evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
 
                 # logging
                 time = timeit.default_timer() - start
@@ -179,13 +184,28 @@ def run_training(cfg):
         assert (epoch == epoch_float)
         print(f'epoch float {epoch_float} (step {global_step}) - epoch {epoch}')
         # evaluation at the end of an epoch
-        evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
-        evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
-        evaluation.model_evaluation(net, cfg, device, 'test', epoch_float, global_step, enable_sem=True)
+        _ = evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
+        f1_change_val = evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step,
+                                                    enable_sem=True)
+        _ = evaluation.model_evaluation(net, cfg, device, 'test', epoch_float, global_step, enable_sem=True)
 
-        if epoch in save_checkpoints:
-            print(f'saving network', flush=True)
+        if cfg.EARLY_STOPPING.ENABLE:
+            if f1_change_val <= best_f1_change_val:
+                trigger_times += 1
+                if trigger_times > cfg.SAVE.PATIENCE:
+                    stop_training = True
+            else:
+                best_f1_change_val = f1_change_val
+                print(f'saving network (F1 {f1_change_val:.3f})', flush=True)
+                networks.save_checkpoint(net, optimizer, epoch, global_step, cfg, early_stopping=True)
+                trigger_times = 0
+
+        if epoch == cfg.TRAINER.EPOCHS and not cfg.DEBUG:
+            print(f'saving network (end of training)', flush=True)
             networks.save_checkpoint(net, optimizer, epoch, global_step, cfg)
+
+        if stop_training:
+            break  # end of training by early stopping
 
 
 if __name__ == '__main__':
@@ -205,7 +225,7 @@ if __name__ == '__main__':
     wandb.init(
         name=cfg.NAME,
         config=cfg,
-        project='siamese_ssl',
+        project='siamese_ssl_extended',
         entity='spacenet7',
         tags=['ssl', 'cd', 'siamese', 'spacenet7', ],
         mode='online' if not cfg.DEBUG else 'disabled',

@@ -53,7 +53,7 @@ def inference_loop(net, dataset: datasets.SpaceNet7CDDataset, device: str, enabl
     return data
 
 
-def model_evaluation(net, cfg, device, run_type: str, epoch: float, step: int, enable_sem: bool = False):
+def model_evaluation(net, cfg, device, run_type: str, epoch: float, step: int, enable_sem: bool = False) -> float:
 
     ds = datasets.SpaceNet7CDDataset(cfg, run_type, no_augmentations=True, dataset_mode='first_last',
                                      disable_multiplier=True, disable_unlabeled=True)
@@ -74,3 +74,5 @@ def model_evaluation(net, cfg, device, run_type: str, epoch: float, step: int, e
                    f'{run_type} sem recall': recall_sem,
                    'step': step, 'epoch': epoch,
                    })
+
+    return f1_change

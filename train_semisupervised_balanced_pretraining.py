@@ -280,7 +280,7 @@ if __name__ == '__main__':
     wandb.init(
         name=cfg.NAME,
         config=cfg,
-        project='siamese_ssl',
+        project='siamese_ssl_extended',
         entity='spacenet7',
         tags=['ssl', 'cd', 'siamese', 'spacenet7', ],
         mode='online' if not cfg.DEBUG else 'disabled',

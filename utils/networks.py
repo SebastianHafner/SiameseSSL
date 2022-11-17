@@ -21,8 +21,11 @@ def create_network(cfg):
     return nn.DataParallel(net)
 
 
-def save_checkpoint(network, optimizer, epoch, step, cfg: experiment_manager.CfgNode):
-    save_file = Path(cfg.PATHS.OUTPUT) / 'networks' / f'{cfg.NAME}_checkpoint{epoch}.pt'
+def save_checkpoint(network, optimizer, epoch, step, cfg: experiment_manager.CfgNode, early_stopping: bool = False):
+    if early_stopping:
+        save_file = Path(cfg.PATHS.OUTPUT) / 'networks' / f'{cfg.NAME}_early_stopping.pt'
+    else:
+        save_file = Path(cfg.PATHS.OUTPUT) / 'networks' / f'{cfg.NAME}_checkpoint{epoch}.pt'
     save_file.parent.mkdir(exist_ok=True)
     checkpoint = {
         'step': step,
