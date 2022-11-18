@@ -41,15 +41,12 @@ def load_checkpoint(epoch: float, cfg: experiment_manager.CfgNode, device: str, 
     net.to(device)
 
     if net_file is None:
-        save_file = Path(cfg.PATHS.OUTPUT) / 'networks' / f'{cfg.NAME}_checkpoint{epoch}.pt'
-        checkpoint = torch.load(save_file, map_location=device)
-    elif best_val:
-        pass
-    else:
-        checkpoint = torch.load(net_file, map_location=device)
+        net_file = Path(cfg.PATHS.OUTPUT) / 'networks' / f'{cfg.NAME}_checkpoint{epoch}.pt'
+    if best_val:
+        net_file = Path(cfg.PATHS.OUTPUT) / 'networks' / f'{cfg.NAME}_early_stopping.pt'
 
+    checkpoint = torch.load(net_file, map_location=device)
     optimizer = torch.optim.AdamW(net.parameters(), lr=cfg.TRAINER.LR, weight_decay=0.01)
-
     net.load_state_dict(checkpoint['network'])
     optimizer.load_state_dict(checkpoint['optimizer'])
 

@@ -8,6 +8,9 @@ EARLY_STOPPING:
   ENABLE: True
   PATIENCE: 2
 
+TRAINER:
+  BATCH_SIZE: 4
+
 MODEL:
   TYPE: 'dtsiameseunet'
 

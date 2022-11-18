@@ -6,7 +6,6 @@ import torch
 from torch import optim
 from torch.utils import data as torch_data
 
-from tabulate import tabulate
 import wandb
 import numpy as np
 
@@ -18,17 +17,6 @@ def concatenate_batches(batch1, batch2, dict_key: str):
 
 
 def run_training(cfg):
-    run_config = {
-        'CONFIG_NAME': cfg.NAME,
-        'device': device,
-        'epochs': cfg.TRAINER.EPOCHS,
-        'learning rate': cfg.TRAINER.LR,
-        'batch size': cfg.TRAINER.BATCH_SIZE,
-    }
-    table = {'run config name': run_config.keys(),
-             ' ': run_config.values(),
-             }
-    print(tabulate(table, headers='keys', tablefmt="fancy_grid", ))
 
     net = networks.create_network(cfg)
     net.to(device)
@@ -160,7 +148,8 @@ def run_training(cfg):
 
                 # evaluation on sample of training and validation set
                 _ = evaluation.model_evaluation(net, cfg, device, 'training', epoch_float, global_step, enable_sem=True)
-                _ = evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step, enable_sem=True)
+                _ = evaluation.model_evaluation(net, cfg, device, 'validation', epoch_float, global_step,
+                                                enable_sem=True)
 
                 # logging
                 time = timeit.default_timer() - start

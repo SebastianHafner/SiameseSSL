@@ -6,7 +6,6 @@ import torch
 from torch import optim
 from torch.utils import data as torch_data
 
-from tabulate import tabulate
 import wandb
 import numpy as np
 
@@ -14,17 +13,6 @@ from utils import networks, datasets, loss_functions, evaluation, experiment_man
 
 
 def run_training(cfg):
-    run_config = {
-        'CONFIG_NAME': cfg.NAME,
-        'device': device,
-        'epochs': cfg.TRAINER.EPOCHS,
-        'learning rate': cfg.TRAINER.LR,
-        'batch size': cfg.TRAINER.BATCH_SIZE,
-    }
-    table = {'run config name': run_config.keys(),
-             ' ': run_config.values(),
-             }
-    print(tabulate(table, headers='keys', tablefmt="fancy_grid", ))
 
     net = networks.create_network(cfg)
     net.to(device)
