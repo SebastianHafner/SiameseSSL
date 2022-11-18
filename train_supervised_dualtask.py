@@ -148,7 +148,7 @@ def run_training(cfg):
 
     # final logging for early stopping
     if cfg.EARLY_STOPPING.ENABLE:
-        net, *_ = networks.load_checkpoint(cfg.INFERENCE_CHECKPOINT, cfg, device, best_val=True)
+        net, *_ = networks.load_checkpoint(cfg.TRAINER.EPOCHS, cfg, device, best_val=True)
         evaluation.model_evaluation_earlystopping(net, cfg, device, 'training', enable_sem=True)
         evaluation.model_evaluation_earlystopping(net, cfg, device, 'validation', enable_sem=True)
         evaluation.model_evaluation_earlystopping(net, cfg, device, 'test', enable_sem=True)
