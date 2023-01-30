@@ -54,11 +54,13 @@ If you find this work useful, please consider citing:
 
 
   ```bibtex
-@article{hafner2022urban,
-    title={Urban Change Detection Using a Dual-Task Siamese Network and Semi-Supervised Learning},
+@inproceedings{hafner2022urban,
+    title={Urban change detection using a dual-task Siamese network and semi-supervised learning},
     author={Hafner, Sebastian and Ban, Yifang and Nascetti, Andrea},
-    journal={arXiv preprint arXiv:2204.12202},
-    year={2022}
+    booktitle={IGARSS 2022-2022 IEEE International Geoscience and Remote Sensing Symposium},
+    pages={1071--1074},
+    year={2022},
+    organization={IEEE}
 }
   ```
   
